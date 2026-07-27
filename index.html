@@ -207,6 +207,20 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
     <button class="btn-sub" id="btn-manage" style="width:100%">노래 관리 <span id="lib-count" style="color:var(--dim)"></span></button>
   </div>
 
+  <!-- ========== 관리자 확인 ========== -->
+  <div id="screen-pin" class="hidden">
+    <div class="card">
+      <h2>노래는 방장만 건드릴 수 있어요</h2>
+      <div class="field">
+        <label for="pin-input">비밀번호</label>
+        <input id="pin-input" type="password" inputmode="numeric" placeholder="숫자 비밀번호" autocomplete="off">
+      </div>
+      <button class="btn-main" id="btn-pin-ok">확인</button>
+      <div class="feedback bad" id="pin-msg"></div>
+    </div>
+    <button class="btn-sub" id="btn-pin-back" style="width:100%">돌아가기</button>
+  </div>
+
   <!-- ========== 노래 관리 ========== -->
   <div id="screen-manage" class="hidden">
     <div class="card">
@@ -402,6 +416,10 @@ const BUZZ_TIME    = 10;   // 정답 버튼을 누른 뒤 답할 시간(초)
 const HINT_AT      = 15;   // 남은 시간이 몇 초일 때 힌트를 띄울지
 const NEXT_DELAY   = 4;    // 정답 공개 후 다음 곡까지 대기(초)
 
+/* 노래 관리 화면에 들어갈 때 물어볼 비밀번호.
+   따옴표 사이를 비워두면("") 아무나 들어갈 수 있게 됩니다. */
+const MANAGER_PIN  = "1234";
+
 /* ══════════════════════════════════════════════════════════════
    ③ 아래부터는 건드리지 않아도 돼요
    ══════════════════════════════════════════════════════════════ */
@@ -543,8 +561,26 @@ function msg(id,text,good=false){ const el=$(id); el.textContent=text; el.classN
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 // ══════════════ 노래 관리 ══════════════
-$('btn-manage').onclick = () => { show('screen-home',false); show('screen-manage',true); };
-$('btn-back').onclick   = () => { show('screen-manage',false); show('screen-home',true); };
+let unlocked = !MANAGER_PIN || sessionStorage.getItem('mgr') === 'ok';
+
+$('btn-manage').onclick = () => {
+  show('screen-home', false);
+  if (unlocked) show('screen-manage', true);
+  else { show('screen-pin', true); setTimeout(()=>$('pin-input').focus(), 60); }
+};
+
+function tryPin(){
+  if ($('pin-input').value.trim() !== MANAGER_PIN) return msg('pin-msg','비밀번호가 달라요.');
+  unlocked = true;
+  sessionStorage.setItem('mgr','ok');
+  $('pin-input').value=''; $('pin-msg').textContent='';
+  show('screen-pin', false); show('screen-manage', true);
+}
+$('btn-pin-ok').onclick = tryPin;
+$('pin-input').addEventListener('keydown', e => { if (e.key === 'Enter') tryPin(); });
+$('btn-pin-back').onclick = () => { show('screen-pin', false); show('screen-home', true); };
+
+$('btn-back').onclick = () => { show('screen-manage',false); show('screen-home',true); };
 
 $('btn-add').onclick = async () => {
   const parsed  = parseYouTube($('in-url').value);
@@ -627,7 +663,7 @@ $('btn-create').onclick = async () => {
   for (let i=0;i<8;i++){ code=makeCode(); if(!(await get(ref(db,'rooms/'+code))).exists()) break; }
   await set(ref(db,'rooms/'+code), {
     host:me, status:'lobby', createdAt:serverTimestamp(),
-    songs: shuffle(library),
+    order: shuffle(library.map((_, i) => i)),   // 곡 자체가 아니라 순서 번호만 저장합니다
     players:{ [me]:{ name, score:0 } }
   });
   isHost = true;
@@ -678,7 +714,7 @@ $('btn-unlock').onclick = () => {
 
 // ══════════════ 진행 ══════════════
 $('btn-start').onclick = async () => {
-  if (!(room.songs||[]).length) return msg('start-msg','등록된 노래가 없어요.');
+  if (!songCount()) return msg('start-msg','등록된 노래가 없어요.');
   await update(ref(db,'rooms/'+roomCode), {
     status:'playing',
     round:{ idx:0, startAt:serverTimestamp(), bonusMs:0, winner:null, revealed:false }
@@ -687,13 +723,20 @@ $('btn-start').onclick = async () => {
 
 async function goNext(){
   const next = room.round.idx + 1;
-  if (next >= room.songs.length) await update(ref(db,'rooms/'+roomCode), { status:'ended' });
+  if (next >= songCount()) await update(ref(db,'rooms/'+roomCode), { status:'ended' });
   else await set(ref(db,`rooms/${roomCode}/round`), {
     idx:next, startAt:serverTimestamp(), bonusMs:0, winner:null, revealed:false
   });
 }
 $('btn-next').onclick   = goNext;
 $('btn-reveal').onclick = () => set(ref(db,`rooms/${roomCode}/round/revealed`), true);
+
+/** 방에는 순서 번호만 있으므로, 실제 곡은 내 보관함에서 꺼내옵니다 */
+function songAt(i){
+  const li = room?.order?.[i];
+  return (li === undefined || li === null) ? null : (library[li] || null);
+}
+const songCount = () => (room?.order || []).length;
 
 const myPlayer = () => room?.players?.[me] || {};
 const amDone   = () => !!myPlayer().place;
@@ -751,7 +794,7 @@ async function submitAnswer(){
   if (!text) return;
   $('answer').value = '';
 
-  if (!isCorrect(text, room.songs[r.idx])){
+  if (!isCorrect(text, songAt(r.idx))){
     msg('answer-msg','아니에요. −1점!');
     $('answer').classList.remove('shake');
     void $('answer').offsetWidth;
@@ -800,7 +843,14 @@ function render(){
 }
 
 function renderGame(){
-  const r = room.round, song = room.songs[r.idx];
+  const r = room.round, song = songAt(r.idx);
+
+  // 보관함이 아직 도착 전이거나 곡이 지워졌으면 잠시 기다립니다
+  if (!song){
+    $('stage-error-text').textContent = '곡 정보를 불러오는 중이에요…';
+    show('stage-error', true);
+    return;
+  }
   const over = r.revealed || !!r.winner;
 
   // ── 새 라운드
@@ -835,7 +885,7 @@ function renderGame(){
   const tried = !!r.tried?.[me];
   const iBuzz = r.buzz?.uid === me;
 
-  $('game-progress').textContent = `${r.idx+1} / ${room.songs.length} 곡`;
+  $('game-progress').textContent = `${r.idx+1} / ${songCount()} 곡`;
   $('my-score').textContent = `내 점수 ${myPlayer().score ?? 0}점`;
   $('target-label').textContent = `${TARGET_SCORE}점 도달 시 확정`;
   $('stage-cover').classList.toggle('buzzed', !!r.buzz && !over);
@@ -908,7 +958,8 @@ function tick(){
   $('timer').classList.toggle('hurry', left <= 10);
 
   if (left <= HINT_AT){
-    const song = room.songs[r.idx];
+    const song = songAt(r.idx);
+    if (!song) return;
     $('hint-text').textContent = `${chosung(song.ar[0])} / ${chosung(song.ti[0])}`;
     show('hint', true);
   }
