@@ -56,6 +56,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 .field{margin-bottom:14px}
 .hidden{display:none !important}
 
+.checkrow{display:flex; align-items:center; gap:10px; margin:0 0 14px; cursor:pointer; font-size:14px; color:var(--paper); font-weight:600}
+.checkrow input{width:20px; height:20px; flex:0 0 auto; accent-color:var(--pink); padding:0}
+.checkrow span{flex:1}
 .divider{display:flex; align-items:center; gap:12px; color:var(--dim); font-size:12px; margin:18px 0; font-weight:600}
 .divider::before,.divider::after{content:''; flex:1; height:1px; background:var(--line)}
 
@@ -198,6 +201,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
         <label for="nickname">닉네임</label>
         <input id="nickname" maxlength="10" placeholder="게임에서 쓸 이름" autocomplete="off">
       </div>
+      <label class="checkrow">
+        <input type="checkbox" id="opt-spectator">
+        <span>관전만 하기 — 점수 없이 진행·감상만 해요</span>
+      </label>
       <button class="btn-main" id="btn-create">새 방 만들기</button>
       <div class="divider">또는</div>
       <div class="field">
@@ -265,6 +272,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
       </div>
 
       <button class="btn-main" id="btn-add">추가하기</button>
+      <button class="btn-sub hidden" id="btn-cancel-edit" style="width:100%; margin-top:8px">수정 취소</button>
       <div class="feedback" id="add-msg"></div>
     </div>
     <button class="btn-sub" id="btn-back" style="width:100%">돌아가기</button>
@@ -372,10 +380,24 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
       </div>
     </div>
 
+    <!-- 관전자 화면 -->
+    <div id="state-spectator" class="hidden" style="margin-bottom:14px">
+      <div class="locked">
+        <div class="big">👁 관전 중</div>
+        <div class="sub">점수에 포함되지 않아요</div>
+      </div>
+    </div>
+
+    <!-- 정답 공개 후: 과반수가 눌러야 다음 곡으로 넘어갑니다 -->
+    <div id="state-next" class="hidden" style="margin-bottom:14px">
+      <button class="btn-go" id="btn-ready">다음 곡 <span id="ready-count"></span></button>
+      <div class="buzzer-hint" id="ready-hint"></div>
+    </div>
+
     <div id="host-controls" class="hidden">
       <div class="row" style="margin-bottom:14px">
         <button class="btn-sub" id="btn-reveal">정답 공개</button>
-        <button class="btn-go" id="btn-next">다음 곡</button>
+        <button class="btn-sub" id="btn-force">바로 넘기기</button>
       </div>
     </div>
 
@@ -391,7 +413,17 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
       <h2 style="font-size:26px; text-align:center">최종 순위</h2>
       <ol class="rank" id="final-rank" style="margin-top:16px"></ol>
     </div>
-    <button class="btn-sub" id="btn-again" style="width:100%">처음으로</button>
+
+    <div class="card hidden" id="humor-card" style="border-color:var(--cyan); background:rgba(53,232,224,.1)">
+      <div style="text-align:center">
+        <div style="font-size:13px; color:var(--cyan); font-weight:700; letter-spacing:1px">🎉 유머상</div>
+        <div style="font-family:var(--display); font-size:30px; margin:6px 0 2px" id="humor-name"></div>
+        <div style="font-size:13px; color:var(--dim)">1·2·3등을 제외하고 뽑았어요</div>
+      </div>
+    </div>
+
+    <button class="btn-main hidden" id="btn-restart" style="margin-bottom:10px">같은 사람들과 다시 하기</button>
+    <button class="btn-sub" id="btn-again" style="width:100%">처음 화면으로</button>
   </div>
 
 </div>
@@ -418,7 +450,6 @@ const WIN_PLACES   = 3;    // 몇 등까지 뽑고 끝낼지
 const TIME_LIMIT   = 30;   // 한 곡당 제한 시간(초)
 const BUZZ_TIME    = 10;   // 정답 버튼을 누른 뒤 답할 시간(초)
 const HINT_AT      = 15;   // 남은 시간이 몇 초일 때 힌트를 띄울지
-const NEXT_DELAY   = 4;    // 정답 공개 후 다음 곡까지 대기(초)
 
 /* 노래 관리 화면에 들어갈 때 물어볼 비밀번호.
    따옴표 사이를 비워두면("") 아무나 들어갈 수 있게 됩니다. */
@@ -595,15 +626,52 @@ $('btn-add').onclick = async () => {
   if (!titles.length)  return msg('add-msg','노래 제목을 입력해주세요.');
 
   const start = startSeconds();
-  await set(ref(db,'library'), [...library, { v:parsed.id, s:start, ar:artists, ti:titles }]);
-  $('in-url').value=''; $('in-artist').value=''; $('in-title').value='';
-  setTimeInputs(0);
+  const entry = { v:parsed.id, s:start, ar:artists, ti:titles };
+
+  let next;
+  if (editing !== null){ next = [...library]; next[editing] = entry; }
+  else next = [...library, entry];
+  await set(ref(db,'library'), next);
+
+  const wasEditing = editing !== null;
+  cancelEdit();
   if (previewReady) preview.stopVideo();
-  msg('add-msg', `${artists[0]} - ${titles[0]} (${fmtTime(start)}부터) 추가했어요.`, true);
+  msg('add-msg',
+    `${artists[0]} - ${titles[0]} (${fmtTime(start)}부터) ${wasEditing ? '수정했어요.' : '추가했어요.'}`, true);
   $('in-url').focus();
 };
 
-window.deleteSong = async i => set(ref(db,'library'), library.filter((_,idx)=>idx!==i));
+window.deleteSong = async i => {
+  await set(ref(db,'library'), library.filter((_,idx)=>idx!==i));
+  cancelEdit();
+};
+
+// ── 등록된 곡 수정하기
+let editing = null;                       // 수정 중인 곡의 번호 (없으면 null)
+
+window.editSong = i => {
+  const s = library[i];
+  if (!s) return;
+  editing = i;
+  $('in-url').value    = 'https://youtu.be/' + s.v;
+  $('in-artist').value = s.ar.join(', ');
+  $('in-title').value  = s.ti.join(', ');
+  setTimeInputs(s.s);
+  $('btn-add').textContent = `${i+1}번 곡 수정 저장`;
+  show('btn-cancel-edit', true);
+  msg('add-msg', '내용을 고친 뒤 저장을 눌러주세요.', true);
+  $('in-artist').scrollIntoView({ behavior:'smooth', block:'center' });
+};
+
+function cancelEdit(){
+  editing = null;
+  $('in-url').value=''; $('in-artist').value=''; $('in-title').value='';
+  setTimeInputs(0);
+  $('btn-add').textContent = '추가하기';
+  show('btn-cancel-edit', false);
+  $('add-msg').textContent = '';
+}
+$('btn-cancel-edit').onclick = cancelEdit;
 
 /** 분·초 입력칸을 초로 합칩니다 */
 function startSeconds(){
@@ -653,7 +721,8 @@ function renderLibrary(){
          <div class="song-ttl">${esc(s.ti[0])}</div>
          <div class="song-meta">${esc(s.ar[0])} · ${fmtTime(s.s)}부터 · 별칭 ${s.ar.length+s.ti.length}개</div>
        </div>
-       <button class="song-del" onclick="deleteSong(${i})" aria-label="삭제">×</button>
+       <button class="song-del" onclick="editSong(${i})" aria-label="수정">✎</button>
+         <button class="song-del" onclick="deleteSong(${i})" aria-label="삭제">×</button>
      </li>`).join('');
 }
 
@@ -668,7 +737,7 @@ $('btn-create').onclick = async () => {
   await set(ref(db,'rooms/'+code), {
     host:me, status:'lobby', createdAt:serverTimestamp(),
     order: shuffle(library.map((_, i) => i)),   // 곡 자체가 아니라 순서 번호만 저장합니다
-    players:{ [me]:{ name, score:0 } }
+    players:{ [me]:{ name, score:0, spectator: $('opt-spectator').checked } }
   });
   isHost = true;
   enterRoom(code);
@@ -684,7 +753,8 @@ $('btn-join').onclick = async () => {
   if (snap.val().status === 'ended') return msg('home-msg','이미 끝난 방이에요.');
   myName = name;
   isHost = snap.val().host === me;
-  await set(ref(db,`rooms/${code}/players/${me}`), { name, score:0 });
+  await set(ref(db,`rooms/${code}/players/${me}`),
+            { name, score:0, spectator: $('opt-spectator').checked });
   enterRoom(code);
 };
 
@@ -740,6 +810,7 @@ $('btn-sound-fix').onclick = () => {
 // ══════════════ 진행 ══════════════
 $('btn-start').onclick = async () => {
   if (!songCount()) return msg('start-msg','등록된 노래가 없어요.');
+  if (contenders().length < 2) return msg('start-msg','관전자를 뺀 참가자가 2명 이상이어야 해요.');
   await update(ref(db,'rooms/'+roomCode), {
     status:'playing',
     round:{ idx:0, startAt:serverTimestamp(), bonusMs:0, winner:null, revealed:false }
@@ -748,13 +819,61 @@ $('btn-start').onclick = async () => {
 
 async function goNext(){
   const next = room.round.idx + 1;
-  if (next >= songCount()) await update(ref(db,'rooms/'+roomCode), { status:'ended' });
-  else await set(ref(db,`rooms/${roomCode}/round`), {
+  if (next >= songCount()) return endGame();
+  await set(ref(db,`rooms/${roomCode}/round`), {
     idx:next, startAt:serverTimestamp(), bonusMs:0, winner:null, revealed:false
   });
 }
-$('btn-next').onclick   = goNext;
 $('btn-reveal').onclick = () => set(ref(db,`rooms/${roomCode}/round/revealed`), true);
+$('btn-ready').onclick  = () => set(ref(db,`rooms/${roomCode}/round/ready/${me}`), true);
+$('btn-force').onclick  = () => { nextScheduled = ''; tryAdvance(); };
+
+/** 다음 곡으로 갈지, 게임을 끝낼지 판단합니다 */
+async function tryAdvance(){
+  const finished = (room.finishers||[]).length;
+  const active   = contenders().filter(([,p]) => !p.place);
+
+  if (finished >= WIN_PLACES) return endGame();
+
+  // 남은 사람이 한 명뿐이면 그 사람에게 다음 등수를 주고 마칩니다
+  if (active.length <= 1){
+    if (active.length === 1){
+      const uid = active[0][0];
+      await update(ref(db,'rooms/'+roomCode), {
+        [`players/${uid}/place`]: finished + 1,
+        finishers: [...(room.finishers||[]), uid]
+      });
+    }
+    return endGame();
+  }
+
+  if (room.round.idx + 1 >= songCount()) return endGame();
+  goNext();
+}
+
+/** 게임 종료 — 유머상은 1·2·3등을 뺀 사람 중에서 무작위로 뽑습니다 */
+async function endGame(){
+  const snap = await get(ref(db,`rooms/${roomCode}/players`));
+  const players = snap.val() || {};
+  const pool = Object.keys(players).filter(uid => !players[uid].place && !players[uid].spectator);
+  const humor = pool.length ? pool[Math.floor(Math.random()*pool.length)] : null;
+  await update(ref(db,'rooms/'+roomCode), { status:'ended', humor });
+}
+
+/** 같은 사람들과 다시 시작 — 점수와 등수를 지우고 곡 순서를 새로 섞습니다 */
+async function restartGame(){
+  const patch = {
+    status:'lobby', humor:null, finishers:null, round:null,
+    order: shuffle(library.map((_, i) => i))
+  };
+  Object.keys(room.players||{}).forEach(uid => {
+    patch[`players/${uid}/score`] = 0;
+    patch[`players/${uid}/place`] = null;
+  });
+  lastRoundKey=''; nextScheduled='';
+  await update(ref(db,'rooms/'+roomCode), patch);
+}
+$('btn-restart').onclick = restartGame;
 
 /** 방에는 순서 번호만 있으므로, 실제 곡은 내 보관함에서 꺼내옵니다 */
 function songAt(i){
@@ -764,6 +883,9 @@ function songAt(i){
 const songCount = () => (room?.order || []).length;
 
 const myPlayer = () => room?.players?.[me] || {};
+const amSpec   = () => !!myPlayer().spectator;
+/** 실제로 점수를 겨루는 사람들만 추립니다 (관전자 제외) */
+const contenders = () => Object.entries(room?.players||{}).filter(([,p]) => !p.spectator);
 const amDone   = () => !!myPlayer().place;
 
 /** 곡을 실제로 몇 초까지 재생했는지 (도전으로 멈춘 시간은 빼고 계산) */
@@ -776,7 +898,7 @@ function playPos(){
 async function pressBuzz(){
   if (!room || room.status !== 'playing') return;
   const r = room.round;
-  if (amDone() || r.revealed || r.winner || r.buzz || r.tried?.[me]) return;
+  if (amSpec() || amDone() || r.revealed || r.winner || r.buzz || r.tried?.[me]) return;
 
   const at = now();
   await runTransaction(ref(db,`rooms/${roomCode}/round/buzz`), cur =>
@@ -852,7 +974,7 @@ function render(){
   const players = Object.entries(room.players||{});
   $('player-count').textContent = `(${players.length}명)`;
   $('lobby-players').innerHTML = players.map(([uid,p]) =>
-    `<div class="chip ${uid===me?'me':''}">${uid===room.host?'👑':''}${esc(p.name)}</div>`).join('');
+    `<div class="chip ${uid===me?'me':''}">${uid===room.host?'👑':''}${p.spectator?'👁':''}${esc(p.name)}</div>`).join('');
 
   show('screen-lobby', room.status==='lobby');
   show('screen-game',  room.status==='playing');
@@ -864,6 +986,10 @@ function render(){
     if (tickTimer){ clearInterval(tickTimer); tickTimer=null; }
     if (ytReady) player.stopVideo();
     renderRank('final-rank');
+    const hu = room.humor && room.players?.[room.humor];
+    show('humor-card', !!hu);
+    if (hu) $('humor-name').textContent = hu.name;
+    show('btn-restart', isHost);
   }
 }
 
@@ -911,7 +1037,7 @@ function renderGame(){
   const iBuzz = r.buzz?.uid === me;
 
   $('game-progress').textContent = `${r.idx+1} / ${songCount()} 곡`;
-  $('my-score').textContent = `내 점수 ${myPlayer().score ?? 0}점`;
+  $('my-score').textContent = amSpec() ? '👁 관전 중' : `내 점수 ${myPlayer().score ?? 0}점`;
   $('target-label').textContent = `${TARGET_SCORE}점 도달 시 확정`;
   $('stage-cover').classList.toggle('buzzed', !!r.buzz && !over);
 
@@ -924,11 +1050,16 @@ function renderGame(){
   }
 
   // ── 다섯 가지 상태 중 하나만 보여줍니다
-  show('state-done',    done);
-  show('state-answer',  !done && iBuzz && !over);
-  show('state-waiting', !done && !!r.buzz && !iBuzz && !over);
-  show('state-used',    !done && !r.buzz && tried && !over);
-  show('state-buzz',    !done && !r.buzz && !tried && !over);
+  const spec = amSpec();
+  show('state-spectator', spec);
+  show('state-done',    !spec && done);
+  show('state-answer',  !spec && !done && iBuzz && !over);
+  show('state-waiting', !spec && !!r.buzz && !iBuzz && !over);
+  show('state-used',    !spec && !done && !r.buzz && tried && !over);
+  show('state-buzz',    !spec && !done && !r.buzz && !tried && !over);
+  show('state-next',    over);
+  show('btn-reveal',    !over);
+  show('btn-force',     over);
 
   // 직전 실패 안내 (부저가 비어 있는 동안에만)
   const showFail = !!r.lastFail && !r.buzz && !over;
@@ -952,14 +1083,20 @@ function renderGame(){
     $('reveal-title').textContent  = song.ti[0];
     $('reveal-gain').textContent   = r.winner ? '+1점' : '';
 
-    if (isHost && nextScheduled !== key){
+    // 과반수가 "다음 곡"을 누르면 진행자가 넘깁니다
+    const total  = Object.keys(room.players||{}).length;
+    const votes  = Object.keys(r.ready||{}).length;
+    const need   = Math.floor(total/2) + 1;
+
+    $('ready-count').textContent = `(${votes}/${need})`;
+    $('btn-ready').disabled = !!r.ready?.[me];
+    $('ready-hint').textContent = r.ready?.[me]
+      ? `${need - votes > 0 ? need - votes + '명 더 눌러야 넘어가요' : '넘어가는 중…'}`
+      : `${need}명이 누르면 다음 곡으로 넘어가요`;
+
+    if (isHost && votes >= need && nextScheduled !== key){
       nextScheduled = key;
-      setTimeout(async () => {
-        const finished = (room.finishers||[]).length;
-        const active   = Object.values(room.players||{}).filter(p => !p.place).length;
-        if (finished >= WIN_PLACES || active <= 1) await update(ref(db,'rooms/'+roomCode), { status:'ended' });
-        else goNext();
-      }, NEXT_DELAY*1000);
+      tryAdvance();
     }
   }
 }
@@ -991,13 +1128,14 @@ function tick(){
 
   if (!isHost) return;
   // 시간이 다 됐거나, 도전할 수 있는 사람이 모두 실패했으면 정답 공개
-  const canStillTry = Object.entries(room.players||{})
+  const canStillTry = contenders()
     .some(([uid,p]) => !p.place && !r.tried?.[uid]);
   if (left <= 0 || !canStillTry) set(ref(db,`rooms/${roomCode}/round/revealed`), true);
 }
 
 function renderRank(targetId){
   const list = Object.entries(room.players||{})
+    .filter(([,p]) => !p.spectator)
     .map(([uid,p]) => ({uid,...p}))
     .sort((a,b) => {
       if (a.place && b.place) return a.place - b.place;
