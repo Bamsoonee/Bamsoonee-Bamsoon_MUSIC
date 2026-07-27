@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>노래방 배틀 · 노래맞추기</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+
+<style>
+:root{
+  --ink:#14091C; --panel:#24123A; --panel-2:#2F1A48; --line:#4A2C6B;
+  --pink:#FF3D8B; --cyan:#35E8E0; --gold:#FFC93D;
+  --paper:#F3E9FF; --dim:#A98CC4;
+  --radius:18px;
+  --display:'Black Han Sans', sans-serif;
+  --body:'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0; padding:0}
+body{
+  background:
+    radial-gradient(1000px 500px at 50% -10%, #3A1550 0%, transparent 60%),
+    radial-gradient(700px 400px at 100% 100%, #1B2E4A 0%, transparent 65%),
+    var(--ink);
+  background-attachment:fixed;
+  color:var(--paper); font-family:var(--body);
+  min-height:100vh; padding:20px 16px 60px; line-height:1.55;
+}
+.wrap{max-width:560px; margin:0 auto}
+
+.card{background:linear-gradient(180deg,var(--panel-2),var(--panel)); border:1px solid var(--line); border-radius:var(--radius); padding:20px; margin-bottom:14px}
+h1{font-family:var(--display); font-size:clamp(30px,8vw,44px); margin:0 0 4px; letter-spacing:-1px; line-height:1.15}
+h1 .accent{color:var(--pink); text-shadow:0 0 18px rgba(255,61,139,.55)}
+.tagline{color:var(--dim); font-size:14px; margin:0 0 22px}
+h2{font-family:var(--display); font-size:19px; margin:0 0 12px; font-weight:400; letter-spacing:-.3px}
+label{display:block; font-size:13px; color:var(--dim); margin:0 0 6px; font-weight:600}
+
+input,select{width:100%; padding:13px 15px; background:rgba(0,0,0,.34); border:1px solid var(--line); border-radius:12px; color:var(--paper); font-family:var(--body); font-size:16px; outline:none; transition:border-color .15s, box-shadow .15s}
+input:focus,select:focus{border-color:var(--pink); box-shadow:0 0 0 3px rgba(255,61,139,.18)}
+input::placeholder{color:#7A5E93}
+input:disabled{opacity:.45}
+
+button{font-family:var(--body); font-size:16px; font-weight:700; border:none; border-radius:12px; padding:14px 20px; cursor:pointer; transition:transform .12s, filter .15s, opacity .15s}
+button:active{transform:scale(.97)}
+button:disabled{opacity:.4; cursor:not-allowed}
+button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-offset:2px}
+.btn-main{background:linear-gradient(135deg,var(--pink),#C42BE0); color:#fff; width:100%; box-shadow:0 6px 22px rgba(255,61,139,.32)}
+.btn-sub{background:rgba(255,255,255,.07); color:var(--paper); border:1px solid var(--line)}
+.btn-go{background:linear-gradient(135deg,var(--cyan),#2BB6E0); color:#062028; width:100%; box-shadow:0 6px 22px rgba(53,232,224,.28)}
+.row{display:flex; gap:8px} .row>*{flex:1}
+.field{margin-bottom:14px}
+.hidden{display:none !important}
+
+.divider{display:flex; align-items:center; gap:12px; color:var(--dim); font-size:12px; margin:18px 0; font-weight:600}
+.divider::before,.divider::after{content:''; flex:1; height:1px; background:var(--line)}
+
+.roomcode{font-family:var(--display); font-size:44px; letter-spacing:10px; color:var(--cyan); text-shadow:0 0 22px rgba(53,232,224,.5); text-align:center; margin:2px 0 4px; padding-left:10px}
+.roomcode-label{text-align:center; color:var(--dim); font-size:12px; font-weight:600; letter-spacing:1px}
+
+.players{display:flex; flex-wrap:wrap; gap:8px}
+.chip{background:rgba(255,255,255,.07); border:1px solid var(--line); border-radius:999px; padding:7px 14px; font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px}
+.chip.me{border-color:var(--pink); background:rgba(255,61,139,.14)}
+
+.songlist{margin:0 0 14px; padding:0; list-style:none; max-height:340px; overflow-y:auto}
+.song-item{display:flex; align-items:center; gap:10px; background:rgba(0,0,0,.25); border:1px solid var(--line); border-radius:12px; padding:11px 13px; margin-bottom:8px}
+.song-num{font-family:var(--display); color:var(--pink); font-size:16px; min-width:26px; text-align:center}
+.song-body{flex:1; min-width:0}
+.song-ttl{font-weight:700; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.song-meta{color:var(--dim); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.song-del{background:none; border:none; color:var(--dim); font-size:20px; padding:4px 8px; line-height:1}
+.song-del:hover{color:var(--pink)}
+.empty{text-align:center; color:var(--dim); font-size:14px; padding:26px 14px; border:1px dashed var(--line); border-radius:12px; margin-bottom:14px}
+
+/* ---------- 시작 지점 고르기 ---------- */
+.timepick{display:flex; align-items:center; gap:8px}
+.timepick input{text-align:center; font-family:var(--display); font-size:22px; letter-spacing:1px; padding:10px 8px; min-width:0}
+.timepick .colon{font-family:var(--display); font-size:22px; color:var(--dim); flex:0 0 auto}
+.preview-box{position:relative; aspect-ratio:16/9; border-radius:12px; overflow:hidden; border:1px solid var(--line); background:#000; margin-bottom:10px}
+.preview-box #yt-preview, .preview-box iframe{position:absolute; inset:0; width:100%; height:100%; border:0}
+
+/* ---------- 무대 ---------- */
+.stage{position:relative; border-radius:var(--radius); overflow:hidden; border:1px solid var(--line); background:#0C0513; aspect-ratio:16/10; margin-bottom:14px}
+#yt-holder{position:absolute; inset:0}
+#yt-holder iframe{width:100%; height:100%; border:0}
+.stage-cover{position:absolute; inset:0; z-index:5; background:radial-gradient(120% 90% at 50% 115%, rgba(255,61,139,.30) 0%, transparent 62%), linear-gradient(180deg,#1B0B29,#0C0513); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; text-align:center; padding:18px}
+.stage-cover.buzzed{background:radial-gradient(120% 90% at 50% 115%, rgba(255,201,61,.34) 0%, transparent 62%), linear-gradient(180deg,#2A1B05,#120A02)}
+.round-num{font-family:var(--display); font-size:14px; letter-spacing:4px; color:var(--dim)}
+.round-num.live{color:var(--gold); letter-spacing:1px; font-size:16px}
+.timer{font-family:var(--display); font-size:clamp(46px,15vw,68px); line-height:1; color:var(--pink); text-shadow:0 0 26px rgba(255,61,139,.6); font-variant-numeric:tabular-nums}
+.timer.hurry{color:var(--gold); text-shadow:0 0 26px rgba(255,201,61,.6); animation:pulse .55s infinite}
+@keyframes pulse{50%{transform:scale(1.09)}}
+
+.hint{background:rgba(255,201,61,.12); border:1px solid rgba(255,201,61,.4); border-radius:12px; padding:8px 16px; animation:popin .3s}
+.hint-label{font-size:10px; color:var(--gold); letter-spacing:2px; font-weight:700; margin-bottom:2px}
+.hint-text{font-family:var(--display); font-size:clamp(17px,4.6vw,22px); color:#fff; letter-spacing:2px}
+
+.eq{display:flex; align-items:flex-end; gap:5px; height:26px}
+.eq span{width:6px; border-radius:3px; background:linear-gradient(180deg,var(--pink),#8B2BE0); height:20%; animation:bounce .9s ease-in-out infinite}
+.eq span:nth-child(1){animation-delay:0s} .eq span:nth-child(2){animation-delay:.12s}
+.eq span:nth-child(3){animation-delay:.24s} .eq span:nth-child(4){animation-delay:.07s}
+.eq span:nth-child(5){animation-delay:.31s} .eq span:nth-child(6){animation-delay:.19s}
+.eq span:nth-child(7){animation-delay:.26s}
+@keyframes bounce{0%,100%{height:18%} 50%{height:100%}}
+.eq.paused span{animation-play-state:paused; height:18%}
+
+.reveal{position:absolute; inset:0; z-index:6; background:linear-gradient(180deg, rgba(11,40,44,.97), rgba(6,20,26,.99)); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:20px; text-align:center; animation:popin .32s cubic-bezier(.2,1.3,.4,1)}
+@keyframes popin{from{opacity:0; transform:scale(.9)} to{opacity:1; transform:scale(1)}}
+.reveal .who{font-size:14px; color:var(--cyan); font-weight:700}
+.reveal .artist{font-size:14px; color:var(--dim); font-weight:600}
+.reveal .title{font-family:var(--display); font-size:clamp(22px,6.5vw,32px); line-height:1.25; color:#fff}
+.reveal .gain{color:var(--gold); font-weight:800; font-size:16px}
+.reveal.miss{background:linear-gradient(180deg, rgba(40,14,30,.97), rgba(20,6,14,.99))}
+.reveal.miss .who{color:var(--dim)}
+
+/* ---------- 부저 ---------- */
+.buzzer{
+  width:100%; padding:26px 20px; font-family:var(--display); font-size:30px;
+  letter-spacing:2px; border-radius:var(--radius);
+  background:linear-gradient(135deg,var(--pink),#C42BE0); color:#fff;
+  box-shadow:0 8px 30px rgba(255,61,139,.42), inset 0 -4px 0 rgba(0,0,0,.22);
+}
+.buzzer:active{transform:translateY(3px); box-shadow:0 3px 14px rgba(255,61,139,.42), inset 0 -1px 0 rgba(0,0,0,.22)}
+.buzzer-hint{text-align:center; font-size:12px; color:var(--dim); margin-top:9px}
+
+.locked{text-align:center; padding:20px; border-radius:var(--radius); border:1px solid var(--line); background:rgba(0,0,0,.25)}
+.locked .big{font-family:var(--display); font-size:21px; line-height:1.3}
+.locked .sub{font-size:13px; color:var(--dim); margin-top:5px}
+.locked.gold{border-color:rgba(255,201,61,.5); background:rgba(255,201,61,.12)}
+.locked.gold .big{color:var(--gold)}
+
+.answer-row{display:flex; gap:8px}
+.answer-row input{flex:1}
+.answer-row button{flex:0 0 auto; padding:13px 20px}
+.feedback{min-height:20px; font-size:13px; margin-top:8px; font-weight:600}
+.feedback.bad{color:var(--pink)} .feedback.good{color:var(--cyan)}
+.shake{animation:shake .34s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.mine{border:1px solid var(--gold) !important; box-shadow:0 0 0 3px rgba(255,201,61,.16)}
+
+.rank{list-style:none; margin:0; padding:0}
+.rank li{display:flex; align-items:center; gap:11px; padding:11px 14px; border-radius:12px; margin-bottom:7px; background:rgba(0,0,0,.25); border:1px solid var(--line)}
+.rank .pos{font-family:var(--display); font-size:18px; color:var(--dim); min-width:30px; text-align:center}
+.rank .nm{flex:1; font-weight:700; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.rank .sc{color:var(--gold); font-weight:800; font-variant-numeric:tabular-nums; min-width:34px; text-align:right}
+.rank li.done{border-color:var(--gold); background:rgba(255,201,61,.13)}
+.rank li.out{opacity:.5}
+.badge{font-size:11px; background:var(--gold); color:#2A1A00; padding:2px 7px; border-radius:6px; font-weight:800; margin-left:6px}
+
+.note{font-size:13px; color:var(--dim); line-height:1.65; background:rgba(0,0,0,.22); border-left:3px solid var(--pink); border-radius:0 10px 10px 0; padding:12px 14px; margin-top:12px}
+.note code{background:rgba(255,255,255,.1); padding:1px 6px; border-radius:5px; font-size:12px; color:var(--cyan)}
+.toolbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:10px}
+.toolbar .status{font-size:13px; color:var(--dim); font-weight:600}
+.setup-steps{margin:0; padding-left:20px; font-size:14px; line-height:1.9}
+
+@media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>노래방 <span class="accent">배틀</span></h1>
+  <p class="tagline">먼저 누른 사람만 답할 수 있어요</p>
+
+  <div id="file-warn" class="card hidden" style="border-color:var(--pink); background:rgba(255,61,139,.12)">
+    <h2 style="color:var(--pink)">이렇게 열면 노래가 안 나와요</h2>
+    <p style="font-size:14px; margin:0 0 10px">
+      지금 파일을 컴퓨터에서 직접 연 상태예요. 유튜브는 <b>인터넷 주소가 있는 페이지</b>에서만 재생을 허용해서,
+      이 상태로는 모든 영상이 <b>오류 153</b>으로 막혀요.
+    </p>
+    <p style="font-size:14px; margin:0">
+      GitHub Pages에 올린 뒤 <code>https://</code>로 시작하는 주소로 접속해주세요.
+      다른 사람들과 같이 하려면 어차피 필요한 단계예요.
+    </p>
+  </div>
+
+  <div id="gate" class="card hidden">
+    <h2>연결 설정이 필요해요</h2>
+    <ol class="setup-steps">
+      <li>console.firebase.google.com 접속</li>
+      <li>프로젝트 설정 → 내 앱 → <b>&lt;/&gt;</b> 웹 앱 등록</li>
+      <li>나오는 <code>firebaseConfig</code> 값을 이 파일 <code>FIREBASE_CONFIG</code> 자리에 붙여넣기</li>
+    </ol>
+  </div>
+
+  <!-- ========== 시작 ========== -->
+  <div id="screen-home" class="hidden">
+    <div class="card">
+      <div class="field">
+        <label for="nickname">닉네임</label>
+        <input id="nickname" maxlength="10" placeholder="게임에서 쓸 이름" autocomplete="off">
+      </div>
+      <button class="btn-main" id="btn-create">새 방 만들기</button>
+      <div class="divider">또는</div>
+      <div class="field">
+        <label for="joincode">방 코드</label>
+        <input id="joincode" maxlength="4" placeholder="예: 7KQM" autocomplete="off"
+               style="text-transform:uppercase; letter-spacing:6px; font-weight:700">
+      </div>
+      <button class="btn-go" id="btn-join">방 참가하기</button>
+      <div class="feedback bad" id="home-msg"></div>
+    </div>
+    <button class="btn-sub" id="btn-manage" style="width:100%">노래 관리 <span id="lib-count" style="color:var(--dim)"></span></button>
+  </div>
+
+  <!-- ========== 노래 관리 ========== -->
+  <div id="screen-manage" class="hidden">
+    <div class="card">
+      <h2>등록된 노래 <span id="manage-count" style="color:var(--dim)"></span></h2>
+      <ul class="songlist" id="songlist"></ul>
+      <div class="empty" id="song-empty">아직 등록된 노래가 없어요.<br>여기 추가하면 모든 방에 계속 남아요.</div>
+    </div>
+    <div class="card">
+      <h2>노래 추가</h2>
+      <div id="origin-info" style="font-size:12px; color:var(--dim); margin:-6px 0 14px; word-break:break-all"></div>
+      <div class="field">
+        <label for="in-url">유튜브 링크</label>
+        <input id="in-url" placeholder="https://youtu.be/... 붙여넣기" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="in-artist">가수 — 다르게 부를 수 있는 이름도 쉼표로</label>
+        <input id="in-artist" placeholder="뉴진스, newjeans, 뉴진즈" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="in-title">제목 — 영어·한글 표기 모두 쉼표로</label>
+        <input id="in-title" placeholder="하입보이, hype boy, 하이프보이" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>시작 지점 <span style="color:var(--dim); font-weight:500">— 유튜브에서 원하는 지점의 시간을 보고 적으면 돼요</span></label>
+        <div class="timepick">
+          <input id="in-min" type="number" min="0" value="0" inputmode="numeric" aria-label="분">
+          <span class="colon">:</span>
+          <input id="in-sec" type="number" min="0" max="59" value="0" inputmode="numeric" aria-label="초">
+          <button class="btn-sub" id="btn-preview" style="flex:0 0 auto; padding:13px 16px">들어보기</button>
+        </div>
+      </div>
+
+      <div id="preview-wrap">
+        <div class="preview-box"><div id="yt-preview"></div></div>
+        <button class="btn-sub" id="btn-grab" style="width:100%; margin-bottom:14px">
+          지금 들리는 이 지점으로 맞추기
+        </button>
+      </div>
+
+      <button class="btn-main" id="btn-add">추가하기</button>
+      <div class="feedback" id="add-msg"></div>
+    </div>
+    <button class="btn-sub" id="btn-back" style="width:100%">돌아가기</button>
+  </div>
+
+  <!-- ========== 대기실 ========== -->
+  <div id="screen-lobby" class="hidden">
+    <div class="card">
+      <div class="roomcode-label">방 코드</div>
+      <div class="roomcode" id="lobby-code">----</div>
+      <button class="btn-sub" id="btn-copy" style="width:100%; margin-top:6px">코드 복사</button>
+    </div>
+    <div class="card">
+      <h2>참가자 <span id="player-count" style="color:var(--dim)"></span></h2>
+      <div class="players" id="lobby-players"></div>
+    </div>
+    <div id="host-panel" class="hidden">
+      <button class="btn-main" id="btn-start">게임 시작</button>
+      <div class="feedback bad" id="start-msg"></div>
+    </div>
+    <div id="guest-wait" class="card hidden" style="text-align:center; color:var(--dim)">
+      진행자가 게임을 시작하기를 기다리는 중…
+    </div>
+    <div class="note">
+      <b>소리 준비</b> — 휴대폰은 한 번 눌러줘야 소리가 나와요. 시작 전에 꼭 눌러주세요.
+      <button class="btn-sub" id="btn-unlock" style="width:100%; margin-top:10px">소리 켜기</button>
+    </div>
+  </div>
+
+  <!-- ========== 게임 ========== -->
+  <div id="screen-game" class="hidden">
+    <div class="toolbar">
+      <div class="status" id="game-progress"></div>
+      <div class="status" id="my-score"></div>
+    </div>
+
+    <div class="stage">
+      <div id="yt-holder"></div>
+      <div class="stage-cover" id="stage-cover">
+        <div class="round-num" id="stage-round">ROUND 1</div>
+        <div class="timer" id="timer">30</div>
+        <div class="hint hidden" id="hint">
+          <div class="hint-label">힌트</div>
+          <div class="hint-text" id="hint-text"></div>
+        </div>
+        <div class="eq" id="eq"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+      <div class="reveal hidden" id="stage-error" style="background:linear-gradient(180deg, rgba(48,12,12,.97), rgba(24,6,6,.99))">
+        <div class="who" style="color:var(--pink)">재생 오류</div>
+        <div class="artist" id="stage-error-text" style="font-size:15px; line-height:1.5"></div>
+        <div class="gain" style="color:var(--dim); font-size:13px">진행자가 다음 곡으로 넘겨주세요</div>
+      </div>
+      <div class="reveal hidden" id="reveal">
+        <div class="who" id="reveal-who"></div>
+        <div class="artist" id="reveal-artist"></div>
+        <div class="title" id="reveal-title"></div>
+        <div class="gain" id="reveal-gain"></div>
+      </div>
+    </div>
+
+    <!-- 직전에 누가 틀렸는지 알려줍니다 -->
+    <div id="fail-flash" class="hidden" style="margin-bottom:10px">
+      <div class="locked" style="padding:12px; border-color:rgba(255,61,139,.45); background:rgba(255,61,139,.12)">
+        <div class="big" style="font-size:16px" id="fail-text"></div>
+        <div class="sub">부저가 다시 열렸어요</div>
+      </div>
+    </div>
+
+    <!-- 상태 1: 부저 누르기 -->
+    <div id="state-buzz" class="hidden" style="margin-bottom:14px">
+      <button class="buzzer" id="btn-buzzer">정답!</button>
+      <div class="buzzer-hint">먼저 누른 사람만 답할 수 있어요 · PC는 스페이스바</div>
+    </div>
+
+    <!-- 상태 2: 내가 답할 차례 -->
+    <div id="state-answer" class="card hidden">
+      <div class="answer-row">
+        <input id="answer" class="mine" placeholder="가수 제목 (예: 뉴진스 하입보이)" autocomplete="off" enterkeyhint="send">
+        <button class="btn-main" id="btn-submit" style="width:auto">제출</button>
+      </div>
+      <div class="feedback" id="answer-msg"></div>
+    </div>
+
+    <!-- 상태 3: 다른 사람이 답하는 중 -->
+    <div id="state-waiting" class="hidden" style="margin-bottom:14px">
+      <div class="locked gold">
+        <div class="big" id="waiting-who"></div>
+        <div class="sub">답을 입력하는 중이에요</div>
+      </div>
+    </div>
+
+    <!-- 상태 4: 이번 곡 기회 소진 -->
+    <div id="state-used" class="hidden" style="margin-bottom:14px">
+      <div class="locked">
+        <div class="big">기회를 썼어요</div>
+        <div class="sub">다음 곡에서 다시 도전할 수 있어요</div>
+      </div>
+    </div>
+
+    <!-- 상태 5: 순위 확정, 구경 -->
+    <div id="state-done" class="hidden" style="margin-bottom:14px">
+      <div class="locked gold">
+        <div class="big" id="done-place"></div>
+        <div class="sub">순위가 확정됐어요. 남은 승부를 지켜보세요</div>
+      </div>
+    </div>
+
+    <div id="host-controls" class="hidden">
+      <div class="row" style="margin-bottom:14px">
+        <button class="btn-sub" id="btn-reveal">정답 공개</button>
+        <button class="btn-go" id="btn-next">다음 곡</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>실시간 순위 <span style="color:var(--dim); font-size:13px" id="target-label"></span></h2>
+      <ol class="rank" id="live-rank"></ol>
+    </div>
+  </div>
+
+  <!-- ========== 결과 ========== -->
+  <div id="screen-end" class="hidden">
+    <div class="card">
+      <h2 style="font-size:26px; text-align:center">최종 순위</h2>
+      <ol class="rank" id="final-rank" style="margin-top:16px"></ol>
+    </div>
+    <button class="btn-sub" id="btn-again" style="width:100%">처음으로</button>
+  </div>
+
+</div>
+
+<script type="module">
+/* ══════════════════════════════════════════════════════════════
+   ① Firebase 설정
+   ══════════════════════════════════════════════════════════════ */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyBUw1v7Zt9o9LH4EmilT7AunluUHCUKF3U",
+  authDomain: "bamsoon-music.firebaseapp.com",
+  databaseURL: "https://bamsoon-music-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "bamsoon-music",
+  storageBucket: "bamsoon-music.firebasestorage.app",
+  messagingSenderId: "607898000978",
+  appId: "1:607898000978:web:c2306f8cabd91f89d5c98b"
+};
+
+/* ══════════════════════════════════════════════════════════════
+   ② 게임 규칙 — 이 숫자들만 바꾸면 됩니다
+   ══════════════════════════════════════════════════════════════ */
+const TARGET_SCORE = 15;   // 몇 점 먼저 만들면 순위 확정 (처음엔 3점으로 시험해보세요)
+const WIN_PLACES   = 3;    // 몇 등까지 뽑고 끝낼지
+const TIME_LIMIT   = 30;   // 한 곡당 제한 시간(초)
+const BUZZ_TIME    = 10;   // 정답 버튼을 누른 뒤 답할 시간(초)
+const HINT_AT      = 15;   // 남은 시간이 몇 초일 때 힌트를 띄울지
+const NEXT_DELAY   = 4;    // 정답 공개 후 다음 곡까지 대기(초)
+
+/* ══════════════════════════════════════════════════════════════
+   ③ 아래부터는 건드리지 않아도 돼요
+   ══════════════════════════════════════════════════════════════ */
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, set, get, update, onValue, runTransaction, serverTimestamp, onDisconnect }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+const $ = id => document.getElementById(id);
+const show = (id, on=true) => $(id).classList.toggle('hidden', !on);
+
+if (!FIREBASE_CONFIG.databaseURL){ show('gate', true); throw new Error('Firebase 설정 없음'); }
+show('screen-home', true);
+
+const app = initializeApp(FIREBASE_CONFIG);
+const db  = getDatabase(app);
+
+let me = sessionStorage.getItem('uid');
+if (!me){ me = 'p' + Math.random().toString(36).slice(2,10); sessionStorage.setItem('uid', me); }
+
+let roomCode=null, isHost=false, myName='';
+let room=null, library=[];
+let serverOffset=0, tickTimer=null;
+let lastRoundKey='', lastBuzzKey='', nextScheduled='';
+let player=null, ytReady=false;
+let preview=null, previewReady=false;
+
+onValue(ref(db,'.info/serverTimeOffset'), s => { serverOffset = s.val() || 0; });
+const now = () => Date.now() + serverOffset;
+
+onValue(ref(db,'library'), snap => {
+  library = snap.val() || [];
+  $('lib-count').textContent = `(${library.length}곡)`;
+  renderLibrary();
+});
+
+// ---------- 유튜브 ----------
+const ytTag = document.createElement('script');
+ytTag.src = 'https://www.youtube.com/iframe_api';
+document.head.appendChild(ytTag);
+// 유튜브에 "어느 사이트에서 재생하는지" 알려주기 위한 값 (오류 153 예방)
+const IS_FILE = location.protocol === 'file:';
+const ORIGIN_VARS = IS_FILE ? {} : { origin: location.origin };
+if (IS_FILE){
+  // 파일을 직접 연 상태에서는 유튜브가 아예 재생을 거부하므로
+  // 미리듣기를 숨기고 분·초 직접 입력만 쓰도록 안내합니다
+  show('file-warn', true);
+  show('preview-wrap', false);
+  show('btn-preview', false);
+  $('origin-info').innerHTML =
+    '지금은 <b>내 컴퓨터 파일</b>로 열려 있어요. 미리듣기는 안 되지만 ' +
+    '<b>분·초를 직접 입력해서 등록</b>하는 건 됩니다.';
+} else {
+  $('origin-info').textContent = '접속 주소: ' + location.origin;
+}
+
+/** 유튜브가 만든 iframe에 referrer 정책을 직접 붙여줍니다 */
+function hardenIframe(p){
+  try{
+    const f = p.getIframe();
+    if (f) f.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
+  }catch(e){}
+}
+
+window.onYouTubeIframeAPIReady = () => {
+  player = new YT.Player('yt-holder', {
+    height:'100%', width:'100%',
+    playerVars:{ controls:0, disablekb:1, modestbranding:1, rel:0, playsinline:1, fs:0, ...ORIGIN_VARS },
+    events:{
+      onReady: () => { ytReady = true; hardenIframe(player); },
+      onError: e => {
+        $('stage-error-text').textContent = ytErrText(e.data);
+        show('stage-error', true);
+      }
+    }
+  });
+  // 노래 등록할 때 시작 지점을 귀로 확인하는 용도 (여긴 조작 막대를 열어둡니다)
+  preview = new YT.Player('yt-preview', {
+    height:'100%', width:'100%',
+    playerVars:{ controls:1, modestbranding:1, rel:0, playsinline:1, ...ORIGIN_VARS },
+    events:{
+      onReady: () => { previewReady = true; hardenIframe(preview); },
+      onError: e => msg('add-msg', ytErrText(e.data))
+    }
+  });
+};
+
+function parseYouTube(raw){
+  const s=(raw||'').trim(); let id=null,t=0;
+  const m = s.match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/|\/live\/)([A-Za-z0-9_-]{11})/);
+  if (m) id=m[1]; else if (/^[A-Za-z0-9_-]{11}$/.test(s)) id=s;
+  const tm = s.match(/[?&](?:t|start)=([0-9hms]+)/i);
+  if (tm){
+    const v=tm[1];
+    if (/^\d+$/.test(v)) t=parseInt(v,10);
+    else{
+      const h=(v.match(/(\d+)h/)||[])[1]||0, mi=(v.match(/(\d+)m/)||[])[1]||0, se=(v.match(/(\d+)s/)||[])[1]||0;
+      t=(+h)*3600+(+mi)*60+(+se);
+    }
+  }
+  return id ? {id,t} : null;
+}
+
+const norm = s => (s||'').toLowerCase().replace(/\s+/g,'').replace(/[.,!?~'"`·・:;/\\\-_()\[\]{}]/g,'');
+
+/** 유튜브가 알려주는 오류 번호를 사람 말로 바꿔줍니다 */
+const YT_ERR = {
+  2:   '유튜브 주소가 잘못됐어요.',
+  5:   '이 브라우저에서 재생할 수 없는 영상이에요.',
+  100: '삭제됐거나 비공개로 바뀐 영상이에요.',
+  101: '저작권자가 외부 사이트 재생을 막아둔 영상이에요. 다른 영상으로 바꿔주세요.',
+  150: '저작권자가 외부 사이트 재생을 막아둔 영상이에요. 다른 영상으로 바꿔주세요.',
+  153: '유튜브가 이 페이지의 주소를 확인하지 못했어요. 파일을 직접 열지 말고 인터넷 주소(https://)로 접속해주세요.'
+};
+const ytErrText = code => YT_ERR[code] || `재생할 수 없는 영상이에요. (오류 ${code})`;
+
+/** 가수와 제목이 둘 다 들어 있어야 정답 (순서·띄어쓰기 무관) */
+function isCorrect(text, song){
+  const n = norm(text);
+  if (!n) return false;
+  return song.ar.some(a => n.includes(norm(a))) && song.ti.some(t => n.includes(norm(t)));
+}
+
+const CHO=['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+function chosung(str){
+  return [...String(str)].map(ch=>{
+    const c=ch.charCodeAt(0);
+    if (c>=0xAC00 && c<=0xD7A3) return CHO[Math.floor((c-0xAC00)/588)];
+    return ch === ' ' ? ' ' : ch;
+  }).join('');
+}
+
+const CODE_CHARS='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const makeCode = () => Array.from({length:4},()=>CODE_CHARS[Math.floor(Math.random()*CODE_CHARS.length)]).join('');
+const shuffle = a => a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(p=>p[1]);
+const MEDAL = {1:'🥇',2:'🥈',3:'🥉'};
+
+function msg(id,text,good=false){ const el=$(id); el.textContent=text; el.className='feedback '+(good?'good':'bad'); }
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ══════════════ 노래 관리 ══════════════
+$('btn-manage').onclick = () => { show('screen-home',false); show('screen-manage',true); };
+$('btn-back').onclick   = () => { show('screen-manage',false); show('screen-home',true); };
+
+$('btn-add').onclick = async () => {
+  const parsed  = parseYouTube($('in-url').value);
+  const artists = $('in-artist').value.split(',').map(s=>s.trim()).filter(Boolean);
+  const titles  = $('in-title').value.split(',').map(s=>s.trim()).filter(Boolean);
+  if (!parsed)         return msg('add-msg','유튜브 링크를 다시 확인해주세요.');
+  if (!artists.length) return msg('add-msg','가수 이름을 입력해주세요.');
+  if (!titles.length)  return msg('add-msg','노래 제목을 입력해주세요.');
+
+  const start = startSeconds();
+  await set(ref(db,'library'), [...library, { v:parsed.id, s:start, ar:artists, ti:titles }]);
+  $('in-url').value=''; $('in-artist').value=''; $('in-title').value='';
+  setTimeInputs(0);
+  if (previewReady) preview.stopVideo();
+  msg('add-msg', `${artists[0]} - ${titles[0]} (${fmtTime(start)}부터) 추가했어요.`, true);
+  $('in-url').focus();
+};
+
+window.deleteSong = async i => set(ref(db,'library'), library.filter((_,idx)=>idx!==i));
+
+/** 분·초 입력칸을 초로 합칩니다 */
+function startSeconds(){
+  const m = Math.max(0, parseInt($('in-min').value,10) || 0);
+  const s = Math.max(0, parseInt($('in-sec').value,10) || 0);
+  return m*60 + s;
+}
+/** 95 → "1:35" */
+function fmtTime(total){
+  const t = Math.max(0, Math.round(total));
+  return `${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`;
+}
+function setTimeInputs(total){
+  const t = Math.max(0, Math.round(total));
+  $('in-min').value = Math.floor(t/60);
+  $('in-sec').value = t % 60;
+}
+
+// 링크에 시간이 붙어 있으면 (?t=95) 자동으로 채워줍니다
+$('in-url').addEventListener('input', () => {
+  const p = parseYouTube($('in-url').value);
+  if (p && p.t > 0) setTimeInputs(p.t);
+});
+
+$('btn-preview').onclick = () => {
+  const p = parseYouTube($('in-url').value);
+  if (!p) return msg('add-msg','유튜브 링크를 먼저 넣어주세요.');
+  if (!previewReady) return msg('add-msg','플레이어를 불러오는 중이에요. 잠시만요.');
+  preview.loadVideoById({ videoId:p.id, startSeconds:startSeconds() });
+  preview.playVideo();
+  msg('add-msg','막대를 움직여 원하는 지점을 찾은 뒤 아래 버튼을 누르세요.', true);
+};
+
+$('btn-grab').onclick = () => {
+  if (!previewReady) return;
+  setTimeInputs(preview.getCurrentTime());
+  msg('add-msg', `${fmtTime(startSeconds())} 지점으로 맞췄어요.`, true);
+};
+
+function renderLibrary(){
+  $('manage-count').textContent = `(${library.length}곡)`;
+  show('song-empty', library.length===0);
+  $('songlist').innerHTML = library.map((s,i)=>
+    `<li class="song-item">
+       <div class="song-num">${i+1}</div>
+       <div class="song-body">
+         <div class="song-ttl">${esc(s.ti[0])}</div>
+         <div class="song-meta">${esc(s.ar[0])} · ${fmtTime(s.s)}부터 · 별칭 ${s.ar.length+s.ti.length}개</div>
+       </div>
+       <button class="song-del" onclick="deleteSong(${i})" aria-label="삭제">×</button>
+     </li>`).join('');
+}
+
+// ══════════════ 방 ══════════════
+$('btn-create').onclick = async () => {
+  const name = $('nickname').value.trim();
+  if (!name) return msg('home-msg','닉네임을 먼저 입력해주세요.');
+  if (!library.length) return msg('home-msg','노래를 먼저 등록해주세요.');
+  myName = name;
+  let code;
+  for (let i=0;i<8;i++){ code=makeCode(); if(!(await get(ref(db,'rooms/'+code))).exists()) break; }
+  await set(ref(db,'rooms/'+code), {
+    host:me, status:'lobby', createdAt:serverTimestamp(),
+    songs: shuffle(library),
+    players:{ [me]:{ name, score:0 } }
+  });
+  isHost = true;
+  enterRoom(code);
+};
+
+$('btn-join').onclick = async () => {
+  const name = $('nickname').value.trim();
+  const code = $('joincode').value.trim().toUpperCase();
+  if (!name) return msg('home-msg','닉네임을 먼저 입력해주세요.');
+  if (code.length !== 4) return msg('home-msg','방 코드는 4글자예요.');
+  const snap = await get(ref(db,'rooms/'+code));
+  if (!snap.exists()) return msg('home-msg','그런 방이 없어요. 코드를 다시 확인해주세요.');
+  if (snap.val().status === 'ended') return msg('home-msg','이미 끝난 방이에요.');
+  myName = name;
+  isHost = snap.val().host === me;
+  await set(ref(db,`rooms/${code}/players/${me}`), { name, score:0 });
+  enterRoom(code);
+};
+
+function enterRoom(code){
+  roomCode = code;
+  $('lobby-code').textContent = code;
+  show('screen-home',false); show('screen-manage',false); show('screen-lobby',true);
+  show('host-panel',isHost); show('guest-wait',!isHost);
+  onDisconnect(ref(db,`rooms/${code}/players/${me}/online`)).set(false);
+  set(ref(db,`rooms/${code}/players/${me}/online`), true);
+  onValue(ref(db,'rooms/'+code), snap => { if(snap.exists()){ room=snap.val(); render(); } });
+}
+
+$('btn-copy').onclick = async () => {
+  try{
+    await navigator.clipboard.writeText(roomCode);
+    $('btn-copy').textContent='복사했어요';
+    setTimeout(()=>$('btn-copy').textContent='코드 복사',1400);
+  }catch{ $('btn-copy').textContent='길게 눌러 복사하세요'; }
+};
+
+$('btn-unlock').onclick = () => {
+  if (!ytReady) return;
+  player.mute();
+  player.loadVideoById({ videoId:'M7lc1UVf-VE', startSeconds:0 });
+  player.playVideo();
+  setTimeout(()=>{ player.stopVideo(); player.unMute(); },600);
+  $('btn-unlock').textContent='소리 준비 완료 ✓';
+  $('btn-unlock').disabled = true;
+};
+
+// ══════════════ 진행 ══════════════
+$('btn-start').onclick = async () => {
+  if (!(room.songs||[]).length) return msg('start-msg','등록된 노래가 없어요.');
+  await update(ref(db,'rooms/'+roomCode), {
+    status:'playing',
+    round:{ idx:0, startAt:serverTimestamp(), bonusMs:0, winner:null, revealed:false }
+  });
+};
+
+async function goNext(){
+  const next = room.round.idx + 1;
+  if (next >= room.songs.length) await update(ref(db,'rooms/'+roomCode), { status:'ended' });
+  else await set(ref(db,`rooms/${roomCode}/round`), {
+    idx:next, startAt:serverTimestamp(), bonusMs:0, winner:null, revealed:false
+  });
+}
+$('btn-next').onclick   = goNext;
+$('btn-reveal').onclick = () => set(ref(db,`rooms/${roomCode}/round/revealed`), true);
+
+const myPlayer = () => room?.players?.[me] || {};
+const amDone   = () => !!myPlayer().place;
+
+/** 곡을 실제로 몇 초까지 재생했는지 (도전으로 멈춘 시간은 빼고 계산) */
+function playPos(){
+  const r = room.round;
+  return Math.max(0, (now() - r.startAt - (r.bonusMs||0)) / 1000);
+}
+
+// ══════════════ 정답 버튼 ══════════════
+async function pressBuzz(){
+  if (!room || room.status !== 'playing') return;
+  const r = room.round;
+  if (amDone() || r.revealed || r.winner || r.buzz || r.tried?.[me]) return;
+
+  const at = now();
+  await runTransaction(ref(db,`rooms/${roomCode}/round/buzz`), cur =>
+    cur ? undefined : { uid:me, name:myName, at });
+}
+$('btn-buzzer').onclick = pressBuzz;
+
+// PC에서는 스페이스바로도 누를 수 있어요
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && document.activeElement?.tagName !== 'INPUT'
+      && !$('state-buzz').classList.contains('hidden')){
+    e.preventDefault();
+    pressBuzz();
+  }
+});
+
+/** 도전 실패 — 1점 깎고, 부저를 다시 열고, 음악을 멈춘 지점부터 이어줍니다 */
+async function failBuzz(buzz){
+  // 실패 기록을 먼저 선점합니다. 성공한 쪽만 뒷처리를 진행해서 중복 처리를 막아요
+  const claim = await runTransaction(ref(db,`rooms/${roomCode}/round/tried/${buzz.uid}`), cur =>
+    cur ? undefined : true);
+  if (!claim.committed) return;
+
+  // 부저 해제와 멈춘 시간 보정을 한 번에 써야 음악 위치가 튀지 않습니다
+  await update(ref(db,`rooms/${roomCode}/round`), {
+    buzz: null,
+    bonusMs: (room.round.bonusMs || 0) + (now() - buzz.at),
+    lastFail: { name: buzz.name, at: now() }
+  });
+  await runTransaction(ref(db,`rooms/${roomCode}/players/${buzz.uid}/score`), s => (s||0) - 1);
+}
+
+// ══════════════ 답 제출 ══════════════
+async function submitAnswer(){
+  if (!room || room.status !== 'playing') return;
+  const r = room.round, buzz = r.buzz;
+  if (!buzz || buzz.uid !== me || r.winner || r.revealed) return;
+
+  const text = $('answer').value.trim();
+  if (!text) return;
+  $('answer').value = '';
+
+  if (!isCorrect(text, room.songs[r.idx])){
+    msg('answer-msg','아니에요. −1점!');
+    $('answer').classList.remove('shake');
+    void $('answer').offsetWidth;
+    $('answer').classList.add('shake');
+    await failBuzz(buzz);
+    return;
+  }
+
+  await set(ref(db,`rooms/${roomCode}/round/winner`), { uid:me, name:myName });
+  const after = await runTransaction(ref(db,`rooms/${roomCode}/players/${me}/score`), s => (s||0) + 1);
+
+  if ((after.snapshot.val() || 0) >= TARGET_SCORE){
+    const fin = await runTransaction(ref(db,`rooms/${roomCode}/finishers`), list => {
+      const arr = list || [];
+      return arr.includes(me) ? undefined : [...arr, me];
+    });
+    if (fin.committed){
+      const place = (fin.snapshot.val()||[]).indexOf(me) + 1;
+      await set(ref(db,`rooms/${roomCode}/players/${me}/place`), place);
+    }
+  }
+}
+$('btn-submit').onclick = submitAnswer;
+$('answer').addEventListener('keydown', e => { if (e.key === 'Enter') submitAnswer(); });
+
+// ══════════════ 화면 ══════════════
+function render(){
+  if (!room) return;
+
+  const players = Object.entries(room.players||{});
+  $('player-count').textContent = `(${players.length}명)`;
+  $('lobby-players').innerHTML = players.map(([uid,p]) =>
+    `<div class="chip ${uid===me?'me':''}">${uid===room.host?'👑':''}${esc(p.name)}</div>`).join('');
+
+  show('screen-lobby', room.status==='lobby');
+  show('screen-game',  room.status==='playing');
+  show('screen-end',   room.status==='ended');
+  show('host-controls', isHost && room.status==='playing');
+
+  if (room.status === 'playing') renderGame();
+  if (room.status === 'ended'){
+    if (tickTimer){ clearInterval(tickTimer); tickTimer=null; }
+    if (ytReady) player.stopVideo();
+    renderRank('final-rank');
+  }
+}
+
+function renderGame(){
+  const r = room.round, song = room.songs[r.idx];
+  const over = r.revealed || !!r.winner;
+
+  // ── 새 라운드
+  const key = r.idx + '_' + r.startAt;
+  if (key !== lastRoundKey){
+    lastRoundKey = key; lastBuzzKey = '';
+    $('answer-msg').textContent=''; $('answer').value='';
+    show('hint', false);
+    show('stage-error', false);
+    if (ytReady){
+      player.loadVideoById({ videoId:song.v, startSeconds: song.s + playPos() });
+      player.unMute(); player.playVideo();
+    }
+    if (tickTimer) clearInterval(tickTimer);
+    tickTimer = setInterval(tick, 200);
+    tick();
+  }
+
+  // ── 도전 시작·종료에 맞춰 음악을 멈추거나 이어붙입니다
+  const buzzKey = r.buzz ? String(r.buzz.at) : 'none';
+  if (buzzKey !== lastBuzzKey){
+    lastBuzzKey = buzzKey;
+    if (ytReady && !over){
+      if (r.buzz) player.pauseVideo();
+      else { player.seekTo(song.s + playPos(), true); player.playVideo(); }
+    }
+    if (r.buzz?.uid === me) setTimeout(()=>$('answer').focus(), 80);
+    if (!r.buzz) $('answer-msg').textContent = '';
+  }
+
+  const done = amDone();
+  const tried = !!r.tried?.[me];
+  const iBuzz = r.buzz?.uid === me;
+
+  $('game-progress').textContent = `${r.idx+1} / ${room.songs.length} 곡`;
+  $('my-score').textContent = `내 점수 ${myPlayer().score ?? 0}점`;
+  $('target-label').textContent = `${TARGET_SCORE}점 도달 시 확정`;
+  $('stage-cover').classList.toggle('buzzed', !!r.buzz && !over);
+
+  if (r.buzz && !over){
+    $('stage-round').textContent = `🔔 ${r.buzz.name} 도전 중`;
+    $('stage-round').classList.add('live');
+  } else {
+    $('stage-round').textContent = `ROUND ${r.idx+1}`;
+    $('stage-round').classList.remove('live');
+  }
+
+  // ── 다섯 가지 상태 중 하나만 보여줍니다
+  show('state-done',    done);
+  show('state-answer',  !done && iBuzz && !over);
+  show('state-waiting', !done && !!r.buzz && !iBuzz && !over);
+  show('state-used',    !done && !r.buzz && tried && !over);
+  show('state-buzz',    !done && !r.buzz && !tried && !over);
+
+  // 직전 실패 안내 (부저가 비어 있는 동안에만)
+  const showFail = !!r.lastFail && !r.buzz && !over;
+  show('fail-flash', showFail);
+  if (showFail) $('fail-text').textContent = `${r.lastFail.name}님 실패 · −1점`;
+
+  if (done)  $('done-place').textContent  = `${MEDAL[myPlayer().place]||''} ${myPlayer().place}등 확정`;
+  if (r.buzz && !iBuzz) $('waiting-who').textContent = `${r.buzz.name}님이 도전 중`;
+
+  renderRank('live-rank');
+
+  show('reveal', over);
+  $('eq').classList.toggle('paused', over || !!r.buzz);
+
+  if (over){
+    if (tickTimer){ clearInterval(tickTimer); tickTimer=null; }
+    if (ytReady) player.pauseVideo();
+    $('reveal').classList.toggle('miss', !r.winner);
+    $('reveal-who').textContent    = r.winner ? `${r.winner.name} 정답!` : '아무도 못 맞췄어요';
+    $('reveal-artist').textContent = song.ar[0];
+    $('reveal-title').textContent  = song.ti[0];
+    $('reveal-gain').textContent   = r.winner ? '+1점' : '';
+
+    if (isHost && nextScheduled !== key){
+      nextScheduled = key;
+      setTimeout(async () => {
+        const finished = (room.finishers||[]).length;
+        const active   = Object.values(room.players||{}).filter(p => !p.place).length;
+        if (finished >= WIN_PLACES || active <= 1) await update(ref(db,'rooms/'+roomCode), { status:'ended' });
+        else goNext();
+      }, NEXT_DELAY*1000);
+    }
+  }
+}
+
+function tick(){
+  if (!room || room.status !== 'playing') return;
+  const r = room.round;
+  if (r.revealed || r.winner) return;
+
+  // 도전 중에는 10초 카운트다운
+  if (r.buzz){
+    const left = Math.max(0, BUZZ_TIME - (now() - r.buzz.at)/1000);
+    $('timer').textContent = Math.ceil(left);
+    $('timer').classList.add('hurry');
+    if (left <= 0 && isHost) failBuzz(r.buzz);
+    return;
+  }
+
+  const left = Math.max(0, TIME_LIMIT - playPos());
+  $('timer').textContent = Math.ceil(left);
+  $('timer').classList.toggle('hurry', left <= 10);
+
+  if (left <= HINT_AT){
+    const song = room.songs[r.idx];
+    $('hint-text').textContent = `${chosung(song.ar[0])} / ${chosung(song.ti[0])}`;
+    show('hint', true);
+  }
+
+  if (!isHost) return;
+  // 시간이 다 됐거나, 도전할 수 있는 사람이 모두 실패했으면 정답 공개
+  const canStillTry = Object.entries(room.players||{})
+    .some(([uid,p]) => !p.place && !r.tried?.[uid]);
+  if (left <= 0 || !canStillTry) set(ref(db,`rooms/${roomCode}/round/revealed`), true);
+}
+
+function renderRank(targetId){
+  const list = Object.entries(room.players||{})
+    .map(([uid,p]) => ({uid,...p}))
+    .sort((a,b) => {
+      if (a.place && b.place) return a.place - b.place;
+      if (a.place) return -1;
+      if (b.place) return 1;
+      return (b.score||0) - (a.score||0);
+    });
+
+  $(targetId).innerHTML = list.map((p,i) => {
+    const rank = p.place || (i+1);
+    const buzzing = room.round?.buzz?.uid === p.uid;
+    return `<li class="${p.place?'done':''} ${room.round?.tried?.[p.uid] && !p.place ? 'out':''}">
+      <div class="pos">${MEDAL[rank] || rank}</div>
+      <div class="nm">${buzzing?'🔔 ':''}${esc(p.name)}${p.uid===me?' <span style="color:var(--pink)">(나)</span>':''}${p.place?'<span class="badge">확정</span>':''}</div>
+      <div class="sc">${p.score||0}</div>
+    </li>`;
+  }).join('');
+}
+
+$('btn-again').onclick = () => location.reload();
+</script>
+</body>
+</html>
