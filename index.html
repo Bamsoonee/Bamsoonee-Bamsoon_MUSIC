@@ -85,8 +85,8 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 
 /* ---------- 무대 ---------- */
 .stage{position:relative; border-radius:var(--radius); overflow:hidden; border:1px solid var(--line); background:#0C0513; aspect-ratio:16/10; margin-bottom:14px}
-#yt-holder{position:absolute; inset:0}
-#yt-holder iframe{width:100%; height:100%; border:0}
+#yt-layer{position:fixed; right:0; bottom:0; width:180px; height:101px; opacity:0; pointer-events:none; z-index:0}
+#yt-holder, #yt-holder iframe{width:100%; height:100%; border:0}
 .stage-cover{position:absolute; inset:0; z-index:5; background:radial-gradient(120% 90% at 50% 115%, rgba(255,61,139,.30) 0%, transparent 62%), linear-gradient(180deg,#1B0B29,#0C0513); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; text-align:center; padding:18px}
 .stage-cover.buzzed{background:radial-gradient(120% 90% at 50% 115%, rgba(255,201,61,.34) 0%, transparent 62%), linear-gradient(180deg,#2A1B05,#120A02)}
 .round-num{font-family:var(--display); font-size:14px; letter-spacing:4px; color:var(--dim)}
@@ -161,6 +161,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 </style>
 </head>
 <body>
+<!-- 유튜브 플레이어는 화면 전환과 무관하게 항상 살아 있어야 소리가 나옵니다.
+     보이지 않게 두되, display:none 은 쓰지 않습니다 -->
+<div id="yt-layer" aria-hidden="true"><div id="yt-holder"></div></div>
+
 <div class="wrap">
 
   <h1>노래방 <span class="accent">배틀</span></h1>
@@ -296,9 +300,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
       <div class="status" id="game-progress"></div>
       <div class="status" id="my-score"></div>
     </div>
+    <button class="btn-sub" id="btn-sound-fix" style="width:100%; margin-bottom:14px; font-size:14px; padding:10px">🔇 소리가 안 들려요</button>
 
     <div class="stage">
-      <div id="yt-holder"></div>
       <div class="stage-cover" id="stage-cover">
         <div class="round-num" id="stage-round">ROUND 1</div>
         <div class="timer" id="timer">30</div>
@@ -703,13 +707,34 @@ $('btn-copy').onclick = async () => {
 };
 
 $('btn-unlock').onclick = () => {
-  if (!ytReady) return;
-  player.mute();
-  player.loadVideoById({ videoId:'M7lc1UVf-VE', startSeconds:0 });
+  if (!ytReady){ $('btn-unlock').textContent = '플레이어 준비 중… 잠시 후 다시 눌러주세요'; return; }
+  const first = library[0];
+  if (!first){ $('btn-unlock').textContent = '등록된 노래가 없어요'; return; }
+
+  // 휴대폰은 "사용자가 직접 누른 순간"에 소리를 내야만 이후 재생이 허용됩니다.
+  // 그래서 음소거가 아니라 실제로 잠깐 소리를 내야 해요
+  player.unMute();
+  player.setVolume(100);
+  player.loadVideoById({ videoId:first.v, startSeconds:0 });
   player.playVideo();
-  setTimeout(()=>{ player.stopVideo(); player.unMute(); },600);
-  $('btn-unlock').textContent='소리 준비 완료 ✓';
+  setTimeout(()=>{ try{ player.pauseVideo(); }catch(e){} }, 400);
+
+  $('btn-unlock').textContent = '소리 준비 완료 ✓';
   $('btn-unlock').disabled = true;
+};
+
+/** 게임 중에 소리가 안 날 때 쓰는 비상 버튼 */
+$('btn-sound-fix').onclick = () => {
+  if (!ytReady) return;
+  player.unMute();
+  player.setVolume(100);
+  const r = room?.round;
+  if (r && !r.buzz && !r.revealed && !r.winner){
+    const song = songAt(r.idx);
+    if (song){ player.seekTo(song.s + playPos(), true); player.playVideo(); }
+  }
+  $('btn-sound-fix').textContent = '소리를 다시 켰어요';
+  setTimeout(()=>$('btn-sound-fix').textContent = '🔇 소리가 안 들려요', 1800);
 };
 
 // ══════════════ 진행 ══════════════
