@@ -496,6 +496,13 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
         <input id="in-hint" placeholder="예: 2022년 데뷔곡 / 광고에 많이 나온 그 노래" autocomplete="off">
       </div>
       <div class="field">
+        <label for="in-timelimit">⏱️ 제한시간 — <span style="color:var(--dim); font-weight:500">음악 들으면서 답하는 시간 (기본값: 15초)</span></label>
+        <div style="display:flex; align-items:center; gap:8px">
+          <input id="in-timelimit" type="number" min="5" max="60" value="15" inputmode="numeric" style="flex:1">
+          <span style="color:var(--dim); font-weight:600">초</span>
+        </div>
+      </div>
+      <div class="field">
         <label>시작 지점 <span style="color:var(--dim); font-weight:500">— 유튜브에서 원하는 지점의 시간을 보고 적으면 돼요</span></label>
         <div class="timepick">
           <input id="in-min" type="number" min="0" value="0" inputmode="numeric" aria-label="분">
@@ -547,6 +554,56 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
     <div class="note">
       <b>소리 준비</b> — 휴대폰은 한 번 눌러줘야 소리가 나와요. 시작 전에 꼭 눌러주세요.
       <button class="btn-sub" id="btn-unlock" style="width:100%; margin-top:10px">소리 켜기</button>
+    </div>
+
+    <div class="card" style="border-color:var(--cyan); background:rgba(53,232,224,.08); margin-top:18px">
+      <div style="display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none" id="rules-toggle">
+        <h2 style="margin:0; flex:1">📋 게임 규칙</h2>
+        <span id="rules-icon" style="font-size:20px; color:var(--cyan); transition:transform .2s">▼</span>
+      </div>
+      <div id="rules-content" style="margin-top:12px; font-size:13px; line-height:1.8; color:var(--paper)">
+        <div style="margin-bottom:14px">
+          <b style="color:var(--cyan)">1️⃣ 정답 입력 규칙</b>
+          <div style="margin-top:6px; margin-left:12px; color:var(--dim)">
+            • 정답: <b style="color:var(--paper)">가수 + 제목</b> (예: "뉴진스 하입보이")
+            <br>• 띄어쓰기는 해도 되고 안 해도 됨 (예: "뉴진스하입보이" ✅)
+            <br>• 가수만 또는 제목만 → <b style="color:var(--pink)">오답 ❌</b>
+          </div>
+        </div>
+
+        <div style="margin-bottom:14px">
+          <b style="color:var(--cyan)">2️⃣ 시간 제한</b>
+          <div style="margin-top:6px; margin-left:12px; color:var(--dim)">
+            • 정답 버튼(부저)을 누른 후 <b style="color:var(--gold)">10초</b> 이내에 입력해야 함
+            <br>• 시간 초과 → <b style="color:var(--pink)">오답 ❌</b>
+          </div>
+        </div>
+
+        <div style="margin-bottom:14px">
+          <b style="color:var(--cyan)">3️⃣ 점수</b>
+          <div style="margin-top:6px; margin-left:12px; color:var(--dim)">
+            • 정답 → <b style="color:var(--gold)">+1점</b> 🎉
+            <br>• 오답 → <b style="color:var(--pink)">-1점</b> 😢
+          </div>
+        </div>
+
+        <div style="margin-bottom:14px">
+          <b style="color:var(--cyan)">4️⃣ 재도전 불가</b>
+          <div style="margin-top:6px; margin-left:12px; color:var(--dim)">
+            • 해당 문제에서 오답하면 재도전 기회 없음
+            <br>• 다음 문제부터 다시 도전 가능 ✨
+          </div>
+        </div>
+
+        <div style="margin-bottom:0">
+          <b style="color:var(--cyan)">5️⃣ 문제 넘기기 (과반수)</b>
+          <div style="margin-top:6px; margin-left:12px; color:var(--dim)">
+            • <b style="color:var(--gold)">과반수 이상</b>이 문제를 못 맞추면 넘길 수 있음
+            <br>• 정답이 나온 후 "다음 곡" 버튼을 눌러 진행
+            <br>• <b style="color:var(--pink)">⚠️ 악의적 넘김은 금지!</b>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -635,8 +692,11 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
     </div>
 
     <div id="host-controls" class="hidden">
-      <div class="row" style="margin-bottom:14px">
+      <div class="row" style="margin-bottom:8px">
         <button class="btn-sub" id="btn-reveal">정답 공개</button>
+        <button class="btn-sub" id="btn-hint-force" style="background:rgba(255,201,61,.2); border-color:var(--gold); color:var(--gold); font-weight:600">💡 힌트 공개</button>
+      </div>
+      <div class="row">
         <button class="btn-sub" id="btn-force" style="background:linear-gradient(135deg,var(--gold),#FFD700); color:#2A1A00; font-weight:800">⚡ 강제 넘기기</button>
       </div>
       <div class="feedback" id="force-msg" style="font-size:12px; text-align:center; margin-top:8px; color:var(--gold)"></div>
@@ -689,9 +749,9 @@ const FIREBASE_CONFIG = {
 
 const TARGET_SCORE = 15;
 const WIN_PLACES   = 3;
-const TIME_LIMIT   = 30;
+const TIME_LIMIT   = 15;   // 기본값: 15초 (노래마다 다르게 설정 가능)
 const BUZZ_TIME    = 10;
-const HINT_AT      = 15;
+const HINT_AT      = 3;    // TIME_LIMIT에서 3초 남았을 때 힌트 공개
 const MANAGER_PIN  = "1234";
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -719,6 +779,14 @@ let serverOffset=0, tickTimer=null;
 let lastRoundKey='', lastBuzzKey='', nextScheduled='';
 let player=null, ytReady=false;
 let preview=null, previewReady=false;
+
+// ========== 규칙 토글 ==========
+let rulesOpen = true;
+$('rules-toggle').onclick = () => {
+  rulesOpen = !rulesOpen;
+  show('rules-content', rulesOpen);
+  $('rules-icon').style.transform = rulesOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
+};
 
 // ========== 채팅 기능 ==========
 let chatOpen = false;
@@ -913,7 +981,8 @@ $('btn-add').onclick = async () => {
 
   const start = startSeconds();
   const hint  = $('in-hint').value.trim();
-  const entry = { v:parsed.id, s:start, ar:artists, ti:titles };
+  const timeLimit = Math.max(5, Math.min(60, parseInt($('in-timelimit').value,10) || 15));
+  const entry = { v:parsed.id, s:start, ar:artists, ti:titles, tl:timeLimit };
   if (hint) entry.h = hint;
 
   let next;
@@ -944,6 +1013,7 @@ window.editSong = i => {
   $('in-artist').value = s.ar.join(', ');
   $('in-title').value  = s.ti.join(', ');
   $('in-hint').value   = s.h || '';
+  $('in-timelimit').value = s.tl || 15;
   setTimeInputs(s.s);
   $('btn-add').textContent = `${i+1}번 곡 수정 저장`;
   show('btn-cancel-edit', true);
@@ -954,6 +1024,7 @@ window.editSong = i => {
 function cancelEdit(){
   editing = null;
   $('in-url').value=''; $('in-artist').value=''; $('in-title').value=''; $('in-hint').value='';
+  $('in-timelimit').value = '15';
   setTimeInputs(0);
   $('btn-add').textContent = '추가하기';
   show('btn-cancel-edit', false);
@@ -1004,7 +1075,7 @@ function renderLibrary(){
        <div class="song-num">${i+1}</div>
        <div class="song-body">
          <div class="song-ttl">${esc(s.ti[0])}</div>
-         <div class="song-meta">${esc(s.ar[0])} · ${fmtTime(s.s)}부터 · ${s.h ? '💡 직접 입력' : '초성 힌트'}</div>
+         <div class="song-meta">${esc(s.ar[0])} · ${fmtTime(s.s)}부터 · ⏱️${s.tl || 15}초 · ${s.h ? '💡 직접 입력' : '초성 힌트'}</div>
        </div>
        <button class="song-del" onclick="editSong(${i})" aria-label="수정">✎</button>
        <button class="song-del" onclick="deleteSong(${i})" aria-label="삭제">×</button>
@@ -1122,6 +1193,7 @@ async function goNext(){
   });
 }
 $('btn-reveal').onclick = () => set(ref(db,`rooms/${roomCode}/round/revealed`), true);
+$('btn-hint-force').onclick = () => set(ref(db,`rooms/${roomCode}/round/forceHint`), true);
 $('btn-ready').onclick  = () => set(ref(db,`rooms/${roomCode}/round/ready/${me}`), true);
 
 $('btn-force').onclick = async () => {
@@ -1413,12 +1485,14 @@ function tick(){
     return;
   }
 
-  const left = Math.max(0, TIME_LIMIT - playPos());
+  const song = songAt(r.idx);
+  const limit = song?.tl || TIME_LIMIT;  // 노래마다 설정된 제한시간, 없으면 기본값
+  const left = Math.max(0, limit - playPos());
   $('timer').textContent = Math.ceil(left);
   $('timer').classList.toggle('hurry', left <= 10);
 
-  if (left <= HINT_AT){
-    const song = songAt(r.idx);
+  // 진행자가 강제로 힌트를 공개하거나, 남은 시간이 적으면 힌트 표시
+  if (r.forceHint || left <= HINT_AT){
     if (!song) return;
     $('hint-text').textContent = song.h || `${chosung(song.ar[0])} / ${chosung(song.ti[0])}`;
     show('hint', true);
