@@ -12,13 +12,17 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 
 <style>
+@font-face {
+  font-family: 'DNFBitBit';
+  src: url('DNFBitBitv2.ttf') format('truetype');
+}
 :root{
   --ink:#14091C; --panel:#24123A; --panel-2:#2F1A48; --line:#4A2C6B;
   --pink:#FF3D8B; --cyan:#35E8E0; --gold:#FFC93D;
   --paper:#F3E9FF; --dim:#A98CC4;
   --radius:18px;
-  --display:'Jua', sans-serif;
-  --body:'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  --display:'DNFBitBit', sans-serif;
+  --body:'Jua', sans-serif;
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
 html,body{margin:0; padding:0}
@@ -207,6 +211,48 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 .timer.hurry{color:var(--gold); text-shadow:0 0 26px rgba(255,201,61,.6); animation:pulse .55s infinite}
 @keyframes pulse{50%{transform:scale(1.09)}}
 
+@keyframes popReveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.6) translateY(20px);
+  }
+  60% {
+    transform: scale(1.08);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes humorPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-10deg);
+  }
+  50% {
+    transform: scale(1.15) rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.rank.end-rank li {
+  animation: popReveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  opacity: 0;
+}
+
+.rank.end-rank li:nth-child(1) { animation-delay: 0s; }
+.rank.end-rank li:nth-child(2) { animation-delay: 0.3s; }
+.rank.end-rank li:nth-child(3) { animation-delay: 0.6s; }
+
+.humor-card.animate {
+  animation: humorPop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  opacity: 0;
+}
+
 .hint{background:rgba(255,201,61,.12); border:1px solid rgba(255,201,61,.4); border-radius:12px; padding:8px 16px; animation:popin .3s}
 .hint-label{font-size:10px; color:var(--gold); letter-spacing:2px; font-weight:700; margin-bottom:2px}
 .hint-text{font-family:var(--display); font-size:clamp(17px,4.6vw,22px); color:#fff; letter-spacing:2px}
@@ -367,7 +413,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 <div class="wrap">
 
   <!-- ========== 채팅 UI ========== -->
-  <button class="chat-toggle" id="chat-toggle-btn">💬</button>
+  <button class="chat-toggle hidden" id="chat-toggle-btn">
+    <img src="moon.png" alt="채팅" style="width:28px; height:28px; filter:brightness(1.2)">
+  </button>
   
   <div class="chat-panel hidden" id="chat-panel">
     <div class="chat-header">채팅 (CHAT)</div>
@@ -1355,15 +1403,23 @@ function render(){
   show('screen-game',  room.status==='playing');
   show('screen-end',   room.status==='ended');
   show('host-controls', isHost && room.status==='playing');
+  show('chat-toggle-btn', room.status==='playing');  // 게임 중일 때만 채팅 버튼 표시
 
   if (room.status === 'playing') renderGame();
   if (room.status === 'ended'){
     if (tickTimer){ clearInterval(tickTimer); tickTimer=null; }
     if (ytReady) player.stopVideo();
+    chatOpen = false;
+    show('chat-panel', false);
     renderRank('final-rank');
     const hu = room.humor && room.players?.[room.humor];
     show('humor-card', !!hu);
-    if (hu) $('humor-name').textContent = hu.name;
+    if (hu) {
+      $('humor-name').textContent = hu.name;
+      const humorCard = $('humor-card');
+      humorCard.classList.add('animate');
+      humorCard.style.animationDelay = '0.9s';
+    }
     show('btn-restart', isHost);
   }
 }
@@ -1515,7 +1571,11 @@ function renderRank(targetId){
       return (b.score||0) - (a.score||0);
     });
 
-  $(targetId).innerHTML = list.map((p,i) => {
+  const rankEl = $(targetId);
+  const isEndScreen = targetId === 'final-rank';
+  rankEl.className = isEndScreen ? 'rank end-rank' : 'rank';
+  
+  rankEl.innerHTML = list.map((p,i) => {
     const rank = p.place || (i+1);
     const buzzing = room.round?.buzz?.uid === p.uid;
     return `<li class="${p.place?'done':''} ${room.round?.tried?.[p.uid] && !p.place ? 'out':''}">
