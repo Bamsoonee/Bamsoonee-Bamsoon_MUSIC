@@ -259,6 +259,28 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 #yt-holder, #yt-holder iframe{width:100%; height:100%; border:0}
 .stage-cover{position:absolute; inset:0; z-index:5; background:radial-gradient(120% 90% at 50% 115%, rgba(255,61,139,.30) 0%, transparent 62%), linear-gradient(180deg,#1B0B29,#0C0513); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; text-align:center; padding:18px}
 .stage-cover.buzzed{background:radial-gradient(120% 90% at 50% 115%, rgba(255,201,61,.34) 0%, transparent 62%), linear-gradient(180deg,#2A1B05,#120A02)}
+
+/* 다 같이 준비될 때까지 기다리는 화면 */
+.waitcover{
+  position:absolute; inset:0; z-index:7;
+  background:linear-gradient(180deg,#1B0B29,#0C0513);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:10px; text-align:center; padding:20px;
+}
+.wait-eyebrow{font-size:12px; letter-spacing:3px; color:var(--dim); font-weight:700}
+.wait-title{font-family:var(--display); font-size:clamp(20px,5.5vw,27px); color:#fff; line-height:1.3}
+.wait-sub{font-size:13px; color:var(--dim); line-height:1.6; max-width:400px}
+.wait-count{font-family:var(--display); font-size:30px; color:var(--cyan); font-variant-numeric:tabular-nums}
+.dots span{
+  display:inline-block; width:7px; height:7px; margin:0 3px; border-radius:50%;
+  background:var(--pink); animation:dotJump 1s ease-in-out infinite;
+}
+.dots span:nth-child(2){animation-delay:.15s}
+.dots span:nth-child(3){animation-delay:.3s}
+@keyframes dotJump{0%,100%{transform:translateY(0); opacity:.35} 50%{transform:translateY(-6px); opacity:1}}
+
+.tag.ad{color:#FF7A7A; border-color:rgba(255,122,122,.45); background:rgba(255,122,122,.12)}
+.song-item.adflag{border-color:rgba(255,122,122,.45)}
 .round-num{font-family:var(--display); font-size:14px; letter-spacing:4px; color:var(--dim)}
 .round-num.live{color:var(--gold); letter-spacing:1px; font-size:16px}
 .timer{font-family:var(--display); font-size:clamp(46px,15vw,68px); line-height:1; color:var(--pink); text-shadow:0 0 26px rgba(255,61,139,.6); font-variant-numeric:tabular-nums}
@@ -580,6 +602,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
       </div>
       <ul class="songlist" id="songlist"></ul>
       <div class="empty" id="song-empty">아직 등록된 노래가 없어요.<br>여기 추가하면 모든 방에 계속 남아요.</div>
+      <button class="btn-sub" id="btn-ad-filter" style="width:100%; margin-bottom:8px; color:#FF9A9A; border-color:rgba(255,122,122,.4); font-weight:700">📢 광고 신고된 곡만 보기</button>
       <button class="btn-sub" id="btn-bulk-time" style="width:100%; border-color:var(--gold); color:var(--gold); font-weight:700">
         ⏱️ 모든 곡 제한시간을 30초로 맞추기
       </button>
@@ -739,7 +762,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
       <div class="status" id="game-progress"></div>
       <div class="status" id="my-score"></div>
     </div>
-    <button class="btn-sub" id="btn-sound-fix" style="width:100%; margin-bottom:14px; font-size:14px; padding:10px">🔇 소리가 안 들려요</button>
+    <div class="row" style="margin-bottom:14px">
+      <button class="btn-sub" id="btn-sound-fix" style="font-size:13.5px; padding:10px">🔇 소리가 안 들려요</button>
+      <button class="btn-sub" id="btn-ad-report" style="font-size:13.5px; padding:10px; color:#FF9A9A; border-color:rgba(255,122,122,.4)">📢 광고 나왔어요</button>
+    </div>
 
     <div class="stage">
       <div class="stage-cover" id="stage-cover">
@@ -750,6 +776,13 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
           <div class="hint-text" id="hint-text"></div>
         </div>
         <div class="eq" id="eq"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+      <div class="waitcover hidden" id="stage-wait">
+        <div class="wait-eyebrow" id="wait-round">ROUND 1</div>
+        <div class="wait-title">다 같이 시작할 준비 중</div>
+        <div class="wait-count" id="wait-count">0 / 0</div>
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="wait-sub">광고가 나오는 사람은 광고가 끝날 때까지 기다려요.<br>모두 준비되면 동시에 노래가 시작됩니다.</div>
       </div>
       <div class="reveal hidden" id="stage-error" style="background:linear-gradient(180deg, rgba(48,12,12,.97), rgba(24,6,6,.99))">
         <div class="who" style="color:var(--pink)">재생 오류</div>
@@ -1268,23 +1301,30 @@ function renderLibrary(){
   const q = norm($('song-filter')?.value || '');
   const rows = library
     .map((s,i) => ({ s, i }))
+    .filter(({s}) => !adOnly || s.ad)
     .filter(({s}) => !q || s.ti.some(t=>norm(t).includes(q)) || s.ar.some(a=>norm(a).includes(q)));
 
-  $('manage-count').textContent = q
+  const adCount = library.filter(s => s.ad).length;
+  $('btn-ad-filter').textContent = adOnly
+    ? `↩ 전체 곡 보기 (광고 신고 ${adCount}곡)`
+    : `📢 광고 신고된 곡만 보기 (${adCount})`;
+  show('btn-ad-filter', adCount > 0);
+
+  $('manage-count').textContent = (q || adOnly)
     ? `(${rows.length} / ${library.length}곡)`
     : `(${library.length}곡)`;
   show('song-empty', library.length === 0);
 
   if (library.length && !rows.length){
     $('songlist').innerHTML =
-      `<li class="empty" style="margin:0">'${esc($('song-filter').value)}' 로 찾은 노래가 없어요.</li>`;
+      `<li class="empty" style="margin:0">조건에 맞는 노래가 없어요.</li>`;
     return;
   }
 
   $('songlist').innerHTML = rows.map(({s,i}) => {
     const hasTl = Number(s.tl) > 0;
     const tl = hasTl ? Number(s.tl) : TIME_LIMIT;
-    return `<li class="song-item">
+    return `<li class="song-item${s.ad ? ' adflag' : ''}">
        <div class="song-num">${i+1}</div>
        <div class="song-body">
          <div class="song-ttl">${esc(s.ti[0])}</div>
@@ -1293,6 +1333,7 @@ function renderLibrary(){
            <span class="tag time">▶ ${fmtTime(s.s)}</span>
            <span class="tag limit${hasTl ? '' : ' basic'}">⏱️ ${tl}초${hasTl ? '' : ' 기본'}</span>
            <span class="tag">${s.h ? '💡 힌트 직접' : '초성 힌트'}</span>
+           ${s.ad ? '<span class="tag ad">📢 광고 신고됨</span>' : ''}
          </div>
        </div>
        <div class="song-acts">
@@ -1304,6 +1345,9 @@ function renderLibrary(){
 }
 
 $('song-filter').addEventListener('input', renderLibrary);
+
+let adOnly = false;
+$('btn-ad-filter').onclick = () => { adOnly = !adOnly; renderLibrary(); };
 
 // ========== 방 ==========
 $('btn-create').onclick = async () => {
@@ -1398,22 +1442,42 @@ $('btn-sound-fix').onclick = () => {
   setTimeout(()=>$('btn-sound-fix').textContent = '🔇 소리가 안 들려요', 1800);
 };
 
+$('btn-ad-report').onclick = async () => {
+  if (!room || room.status !== 'playing') return;
+  const li = room.order?.[room.round.idx];
+  if (li === undefined || li === null) return;
+  await set(ref(db,`library/${li}/ad`), true);
+  $('btn-ad-report').textContent = '✓ 신고했어요';
+  $('btn-ad-report').disabled = true;
+};
+
 // ========== 진행 ==========
+// 라운드는 두 단계로 진행돼요.
+//  1) loading — 각자 영상을 미리 불러오고, 광고가 있으면 음소거로 흘려보냅니다
+//  2) playing — 모두 준비되면 그때 동시에 노래가 시작되고 타이머가 돕니다
+const newRound = idx => ({
+  idx,
+  rid: Math.random().toString(36).slice(2,10),
+  phase: 'loading',
+  startAt: null,
+  bonusMs: 0,
+  winner: null,
+  revealed: false
+});
+
 $('btn-start').onclick = async () => {
   if (!songCount()) return msg('start-msg','등록된 노래가 없어요.');
   if (contenders().length < 2) return msg('start-msg','관전자를 뺀 참가자가 2명 이상이어야 해요.');
   await update(ref(db,'rooms/'+roomCode), {
     status:'playing',
-    round:{ idx:0, startAt:serverTimestamp(), bonusMs:0, winner:null, revealed:false }
+    round: newRound(0)
   });
 };
 
 async function goNext(){
   const next = room.round.idx + 1;
   if (next >= songCount()) return endGame();
-  await set(ref(db,`rooms/${roomCode}/round`), {
-    idx:next, startAt:serverTimestamp(), bonusMs:0, winner:null, revealed:false
-  });
+  await set(ref(db,`rooms/${roomCode}/round`), newRound(next));
 }
 $('btn-reveal').onclick = () => set(ref(db,`rooms/${roomCode}/round/revealed`), true);
 $('btn-hint-force').onclick = () => set(ref(db,`rooms/${roomCode}/round/forceHint`), true);
@@ -1468,7 +1532,8 @@ async function restartGame(){
     patch[`players/${uid}/score`] = 0;
     patch[`players/${uid}/place`] = null;
   });
-  lastRoundKey=''; nextScheduled='';
+  lastRoundKey=''; nextScheduled=''; lastPhase=''; startedRid='';
+  clearPrep(); clearTimeout(hostStartTimer);
   await update(ref(db,'rooms/'+roomCode), patch);
 }
 $('btn-restart').onclick = restartGame;
@@ -1492,7 +1557,81 @@ const amDone   = () => !!myPlayer().place;
 
 function playPos(){
   const r = room.round;
+  if (!r.startAt || r.phase !== 'playing') return 0;
   return Math.max(0, (now() - r.startAt - (r.bonusMs||0)) / 1000);
+}
+
+// ========== 광고 흘려보내기 · 동시 시작 ==========
+// 유튜브 광고는 끌 수 없지만, 광고가 도는 동안 음소거로 지나 보내고
+// 참가자 전원이 준비된 다음에 노래를 동시에 시작할 수는 있어요.
+let prepTimer = null, prepGiveUp = null, hostStartTimer = null;
+let lastPhase = '', startedRid = '';
+const PREP_LIMIT_MS = 40000;   // 광고가 아무리 길어도 40초 뒤엔 그냥 시작
+
+// 지금 나오는 게 광고인지 판단합니다.
+// 광고 중에는 재생 시간이 0부터 흐르고, 길이도 실제 곡보다 훨씬 짧아요.
+function contentStarted(song){
+  if (!ytReady) return false;
+  let t, d;
+  try{ t = player.getCurrentTime(); d = player.getDuration(); }catch(e){ return false; }
+  if (!d || d <= 0) return false;
+  if (song.s >= 5) return t >= song.s - 1.5;   // 지정한 지점까지 왔으면 본편
+  return d > 90;                               // 0초부터 시작하는 곡은 길이로 판단
+}
+
+function clearPrep(){
+  clearInterval(prepTimer); prepTimer = null;
+  clearTimeout(prepGiveUp); prepGiveUp = null;
+}
+
+// 새 라운드가 열리면 조용히 미리 불러둡니다
+function prepareRound(song){
+  clearPrep();
+  markReady(false);
+  if (!ytReady){ markReady(true); return; }
+
+  try{
+    player.mute();                                   // 광고 소리 차단
+    player.loadVideoById({ videoId: song.v, startSeconds: song.s });
+    player.playVideo();
+  }catch(e){ markReady(true); return; }
+
+  prepTimer = setInterval(() => {
+    if (!contentStarted(song)) return;
+    clearPrep();
+    try{ player.pauseVideo(); player.seekTo(song.s, true); }catch(e){}
+    markReady(true);
+  }, 300);
+
+  prepGiveUp = setTimeout(() => { clearPrep(); markReady(true); }, PREP_LIMIT_MS);
+}
+
+function markReady(on){
+  if (!roomCode || !room?.round?.rid) return;
+  set(ref(db,`rooms/${roomCode}/round/rdy/${me}`), on ? true : null);
+}
+
+// 모두 준비되면 진행자가 신호를 보냅니다
+async function beginRound(rid){
+  if (startedRid === rid) return;
+  startedRid = rid;
+  clearTimeout(hostStartTimer);
+  await update(ref(db,`rooms/${roomCode}/round`), {
+    phase: 'playing',
+    startAt: serverTimestamp()
+  });
+}
+
+// 신호가 오면 다 같이 소리를 켜고 재생합니다
+function startPlayback(song){
+  clearPrep();
+  if (!ytReady) return;
+  try{
+    player.unMute();
+    player.setVolume(100);
+    player.seekTo(song.s + playPos(), true);
+    player.playVideo();
+  }catch(e){}
 }
 
 // ========== 정답 버튼 ==========
@@ -1614,24 +1753,45 @@ function renderGame(){
     return;
   }
   const over = r.revealed || !!r.winner;
+  const prepping = r.phase !== 'playing' && !over;
 
-  const key = r.idx + '_' + r.startAt;
+  const key = r.rid || (r.idx + '_' + r.startAt);
   if (key !== lastRoundKey){
-    lastRoundKey = key; lastBuzzKey = '';
+    lastRoundKey = key; lastBuzzKey = ''; lastPhase = '';
     $('answer-msg').textContent=''; $('answer').value='';
     show('hint', false);
     show('stage-error', false);
-    if (ytReady){
-      player.loadVideoById({ videoId:song.v, startSeconds: song.s + playPos() });
-      player.unMute(); player.playVideo();
+    $('btn-ad-report').disabled = false;
+    $('btn-ad-report').textContent = '📢 광고 나왔어요';
+    if (tickTimer){ clearInterval(tickTimer); tickTimer = null; }
+    if (r.phase !== 'playing') prepareRound(song);   // 조용히 미리 불러두기
+    if (isHost){
+      clearTimeout(hostStartTimer);
+      hostStartTimer = setTimeout(() => beginRound(key), PREP_LIMIT_MS + 3000);
     }
+  }
+
+  // 준비 화면 표시 · 모두 준비됐는지 확인
+  show('stage-wait', prepping);
+  if (prepping){
+    const ids = Object.keys(room.players || {}).filter(uid => room.players[uid].online !== false);
+    const ready = ids.filter(uid => r.rdy?.[uid]).length;
+    $('wait-round').textContent = `ROUND ${r.idx+1}`;
+    $('wait-count').textContent = `${ready} / ${ids.length}`;
+    if (isHost && ids.length && ready >= ids.length) beginRound(key);
+  }
+
+  // 시작 신호가 오면 모두 동시에 재생
+  if (r.phase === 'playing' && lastPhase !== 'playing'){
+    lastPhase = 'playing';
+    startPlayback(song);
     if (tickTimer) clearInterval(tickTimer);
     tickTimer = setInterval(tick, 200);
     tick();
   }
 
   const buzzKey = r.buzz ? String(r.buzz.at) : 'none';
-  if (buzzKey !== lastBuzzKey){
+  if (buzzKey !== lastBuzzKey && !prepping){
     lastBuzzKey = buzzKey;
     if (ytReady && !over){
       if (r.buzz) player.pauseVideo();
@@ -1659,12 +1819,12 @@ function renderGame(){
   }
 
   const spec = amSpec();
-  show('state-spectator', spec);
-  show('state-done',    !spec && done);
-  show('state-answer',  !spec && !done && iBuzz && !over);
-  show('state-waiting', !spec && !!r.buzz && !iBuzz && !over);
-  show('state-used',    !spec && !done && !r.buzz && tried && !over);
-  show('state-buzz',    !spec && !done && !r.buzz && !tried && !over);
+  show('state-spectator', spec && !prepping);
+  show('state-done',    !spec && done && !prepping);
+  show('state-answer',  !spec && !done && iBuzz && !over && !prepping);
+  show('state-waiting', !spec && !!r.buzz && !iBuzz && !over && !prepping);
+  show('state-used',    !spec && !done && !r.buzz && tried && !over && !prepping);
+  show('state-buzz',    !spec && !done && !r.buzz && !tried && !over && !prepping);
   show('state-next',    over);
   show('btn-reveal',    !over);
   show('btn-force',     over);
@@ -1712,6 +1872,7 @@ function renderGame(){
 function tick(){
   if (!room || room.status !== 'playing') return;
   const r = room.round;
+  if (r.phase !== 'playing') return;
   if (r.revealed || r.winner) return;
 
   if (r.buzz){
