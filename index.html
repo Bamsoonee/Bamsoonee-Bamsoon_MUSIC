@@ -199,6 +199,27 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 .preview-box{position:relative; aspect-ratio:16/9; border-radius:12px; overflow:hidden; border:1px solid var(--line); background:#000; margin-bottom:10px}
 .preview-box #yt-preview, .preview-box iframe{position:absolute; inset:0; width:100%; height:100%; border:0}
 
+/* 듣다가 그 지점 잡기 */
+.grabber{display:flex; align-items:stretch; gap:8px; margin-bottom:10px}
+.grab-now{
+  flex:1; min-width:0; display:flex; flex-direction:column; justify-content:center;
+  background:rgba(0,0,0,.34); border:1px solid var(--line); border-radius:12px; padding:8px 14px;
+}
+.grab-label{font-size:11px; color:var(--dim); font-weight:700; letter-spacing:1px}
+.grab-time{font-family:var(--display); font-size:26px; line-height:1.1; color:var(--cyan); font-variant-numeric:tabular-nums}
+.btn-catch{
+  flex:0 0 auto; padding:0 20px; font-size:17px; font-weight:800;
+  background:linear-gradient(135deg,var(--gold),#FF9E2C); color:#2A1A00;
+  box-shadow:0 5px 18px rgba(255,201,61,.3);
+}
+.picked{
+  display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+  background:rgba(53,232,224,.1); border:1px solid rgba(53,232,224,.4);
+  border-radius:12px; padding:11px 15px; margin-bottom:16px;
+}
+.picked-label{font-size:12px; color:var(--dim); font-weight:700; margin-right:8px}
+.picked-time{font-family:var(--display); font-size:22px; color:var(--cyan); font-variant-numeric:tabular-nums}
+
 /* ---------- 무대 ---------- */
 .stage{position:relative; border-radius:var(--radius); overflow:hidden; border:1px solid var(--line); background:#0C0513; aspect-ratio:16/10; margin-bottom:14px}
 #yt-layer{position:fixed; right:0; bottom:0; width:180px; height:101px; opacity:0; pointer-events:none; z-index:0}
@@ -269,8 +290,8 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 .reveal{position:absolute; inset:0; z-index:6; background:linear-gradient(180deg, rgba(11,40,44,.97), rgba(6,20,26,.99)); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:20px; text-align:center; animation:popin .32s cubic-bezier(.2,1.3,.4,1)}
 @keyframes popin{from{opacity:0; transform:scale(.9)} to{opacity:1; transform:scale(1)}}
 .reveal .who{font-size:14px; color:var(--cyan); font-weight:700}
-.reveal .artist{font-size:14px; color:var(--dim); font-weight:600}
-.reveal .title{font-family:var(--display); font-size:clamp(22px,6.5vw,32px); line-height:1.25; color:#fff}
+.reveal .artist{font-size:13px; color:var(--dim); font-weight:600; letter-spacing:1px; opacity:.8}
+.reveal .title{font-family:var(--display); font-size:clamp(26px,8vw,40px); line-height:1.2; color:#fff; margin-top:3px}
 .reveal .gain{color:var(--gold); font-weight:800; font-size:16px}
 .reveal.miss{background:linear-gradient(180deg, rgba(40,14,30,.97), rgba(20,6,14,.99))}
 .reveal.miss .who{color:var(--dim)}
@@ -523,6 +544,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
       <h2>등록된 노래 <span id="manage-count" style="color:var(--dim)"></span></h2>
       <ul class="songlist" id="songlist"></ul>
       <div class="empty" id="song-empty">아직 등록된 노래가 없어요.<br>여기 추가하면 모든 방에 계속 남아요.</div>
+      <button class="btn-sub" id="btn-bulk-time" style="width:100%; border-color:var(--gold); color:var(--gold); font-weight:700">
+        ⏱️ 모든 곡 제한시간을 30초로 맞추기
+      </button>
+      <div class="feedback" id="bulk-msg"></div>
     </div>
     <div class="card">
       <h2>노래 추가</h2>
@@ -544,27 +569,44 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
         <input id="in-hint" placeholder="예: 2022년 데뷔곡 / 광고에 많이 나온 그 노래" autocomplete="off">
       </div>
       <div class="field">
-        <label for="in-timelimit">⏱️ 제한시간 — <span style="color:var(--dim); font-weight:500">음악 들으면서 답하는 시간 (기본값: 15초)</span></label>
+        <label for="in-timelimit">⏱️ 제한시간 — <span style="color:var(--dim); font-weight:500">음악 들으면서 답하는 시간 (기본값: 30초)</span></label>
         <div style="display:flex; align-items:center; gap:8px">
-          <input id="in-timelimit" type="number" min="5" max="60" value="15" inputmode="numeric" style="flex:1">
+          <input id="in-timelimit" type="number" min="5" max="90" value="30" inputmode="numeric" style="flex:1">
           <span style="color:var(--dim); font-weight:600">초</span>
         </div>
       </div>
       <div class="field">
-        <label>시작 지점 <span style="color:var(--dim); font-weight:500">— 유튜브에서 원하는 지점의 시간을 보고 적으면 돼요</span></label>
-        <div class="timepick">
-          <input id="in-min" type="number" min="0" value="0" inputmode="numeric" aria-label="분">
-          <span class="colon">:</span>
-          <input id="in-sec" type="number" min="0" max="59" value="0" inputmode="numeric" aria-label="초">
-          <button class="btn-sub" id="btn-preview" style="flex:0 0 auto; padding:13px 16px">들어보기</button>
-        </div>
+        <label>🎧 시작 지점 고르기 <span style="color:var(--dim); font-weight:500">— 링크를 넣으면 바로 재생돼요. 듣다가 원하는 순간에 버튼을 누르세요</span></label>
       </div>
 
       <div id="preview-wrap">
         <div class="preview-box"><div id="yt-preview"></div></div>
-        <button class="btn-sub" id="btn-grab" style="width:100%; margin-bottom:14px">
-          지금 들리는 이 지점으로 맞추기
-        </button>
+
+        <div class="grabber">
+          <div class="grab-now">
+            <div class="grab-label">지금 듣고 있는 지점</div>
+            <div class="grab-time" id="live-time">0:00</div>
+          </div>
+          <button class="btn-catch" id="btn-grab">📍 여기부터!</button>
+        </div>
+
+        <div class="picked" id="picked-box">
+          <div>
+            <span class="picked-label">선택한 시작 지점</span>
+            <span class="picked-time" id="picked-time">0:00</span>
+          </div>
+          <button class="btn-sub" id="btn-testplay" style="padding:9px 14px; font-size:13px">▶ 이대로 들어보기</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>직접 입력해도 돼요 <span style="color:var(--dim); font-weight:500">(분 : 초)</span></label>
+        <div class="timepick">
+          <input id="in-min" type="number" min="0" value="0" inputmode="numeric" aria-label="분">
+          <span class="colon">:</span>
+          <input id="in-sec" type="number" min="0" max="59" value="0" inputmode="numeric" aria-label="초">
+          <button class="btn-sub" id="btn-preview" style="flex:0 0 auto; padding:13px 16px">그 지점 듣기</button>
+        </div>
       </div>
 
       <button class="btn-main" id="btn-add">추가하기</button>
@@ -797,9 +839,9 @@ const FIREBASE_CONFIG = {
 
 const TARGET_SCORE = 15;
 const WIN_PLACES   = 3;
-const TIME_LIMIT   = 15;   // 기본값: 15초 (노래마다 다르게 설정 가능)
+const TIME_LIMIT   = 30;   // 기본값: 30초 (노래마다 다르게 설정 가능)
 const BUZZ_TIME    = 10;
-const HINT_AT      = 3;    // TIME_LIMIT에서 3초 남았을 때 힌트 공개
+const HINT_AT      = 10;   // 10초 남았을 때 힌트 공개
 const MANAGER_PIN  = "1234";
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -911,8 +953,9 @@ if (IS_FILE){
   show('preview-wrap', false);
   show('btn-preview', false);
   $('origin-info').innerHTML =
-    '지금은 <b>내 컴퓨터 파일</b>로 열려 있어요. 미리듣기는 안 되지만 ' +
-    '<b>분·초를 직접 입력해서 등록</b>하는 건 됩니다.';
+    '⚠️ 지금은 <b>내 컴퓨터 파일</b>로 열려 있어서 미리듣기가 안 돼요.<br>' +
+    '들으면서 지점을 고르려면 <b>깃허브 페이지 주소(https://…)</b>로 접속해주세요. ' +
+    '지금 화면에서도 <b>분·초를 직접 입력해서 등록</b>하는 건 됩니다.';
 } else {
   $('origin-info').textContent = '접속 주소: ' + location.origin;
 }
@@ -1029,7 +1072,7 @@ $('btn-add').onclick = async () => {
 
   const start = startSeconds();
   const hint  = $('in-hint').value.trim();
-  const timeLimit = Math.max(5, Math.min(60, parseInt($('in-timelimit').value,10) || 15));
+  const timeLimit = Math.max(5, Math.min(90, parseInt($('in-timelimit').value,10) || TIME_LIMIT));
   const entry = { v:parsed.id, s:start, ar:artists, ti:titles, tl:timeLimit };
   if (hint) entry.h = hint;
 
@@ -1042,7 +1085,7 @@ $('btn-add').onclick = async () => {
   cancelEdit();
   if (previewReady) preview.stopVideo();
   msg('add-msg',
-    `${artists[0]} - ${titles[0]} (${fmtTime(start)}부터) ${wasEditing ? '수정했어요.' : '추가했어요.'}`, true);
+    `${artists[0]} - ${titles[0]} (${fmtTime(start)}부터 · ${timeLimit}초) ${wasEditing ? '수정했어요.' : '추가했어요.'}`, true);
   $('in-url').focus();
 };
 
@@ -1061,8 +1104,10 @@ window.editSong = i => {
   $('in-artist').value = s.ar.join(', ');
   $('in-title').value  = s.ti.join(', ');
   $('in-hint').value   = s.h || '';
-  $('in-timelimit').value = s.tl || 15;
+  $('in-timelimit').value = Number(s.tl) > 0 ? Number(s.tl) : TIME_LIMIT;
   setTimeInputs(s.s);
+  loadedVideoId = null;
+  loadPreview(s.s, true);
   $('btn-add').textContent = `${i+1}번 곡 수정 저장`;
   show('btn-cancel-edit', true);
   msg('add-msg', '내용을 고친 뒤 저장을 눌러주세요.', true);
@@ -1072,13 +1117,23 @@ window.editSong = i => {
 function cancelEdit(){
   editing = null;
   $('in-url').value=''; $('in-artist').value=''; $('in-title').value=''; $('in-hint').value='';
-  $('in-timelimit').value = '15';
+  $('in-timelimit').value = String(TIME_LIMIT);
   setTimeInputs(0);
   $('btn-add').textContent = '추가하기';
   show('btn-cancel-edit', false);
   $('add-msg').textContent = '';
 }
 $('btn-cancel-edit').onclick = cancelEdit;
+
+// 등록된 모든 곡의 제한시간을 기본값(30초)으로 한 번에 맞춥니다
+$('btn-bulk-time').onclick = async () => {
+  if (!library.length) return msg('bulk-msg','등록된 노래가 없어요.');
+  if (!confirm(`등록된 ${library.length}곡 전부를 ${TIME_LIMIT}초로 바꿀까요?`)) return;
+  const next = library.map(s => ({ ...s, tl: TIME_LIMIT }));
+  await set(ref(db,'library'), next);
+  msg('bulk-msg', `${next.length}곡 모두 ${TIME_LIMIT}초로 맞췄어요.`, true);
+  setTimeout(() => { $('bulk-msg').textContent = ''; }, 3000);
+};
 
 function startSeconds(){
   const m = Math.max(0, parseInt($('in-min').value,10) || 0);
@@ -1093,41 +1148,102 @@ function setTimeInputs(total){
   const t = Math.max(0, Math.round(total));
   $('in-min').value = Math.floor(t/60);
   $('in-sec').value = t % 60;
+  paintPicked();
+}
+function paintPicked(){
+  $('picked-time').textContent = fmtTime(startSeconds());
+}
+$('in-min').addEventListener('input', paintPicked);
+$('in-sec').addEventListener('input', paintPicked);
+
+// ---- 미리듣기: 링크만 넣으면 바로 재생되고, 듣다가 그 지점을 잡습니다 ----
+let loadedVideoId = null;
+let urlTimer = null;
+let testStop = null;
+
+function loadPreview(startAt, autoplay){
+  if (IS_FILE) return false;          // 파일로 열었을 땐 미리듣기 자체를 시도하지 않음
+  const p = parseYouTube($('in-url').value);
+  if (!p || !previewReady) return false;
+  const from = Math.max(0, Math.round(startAt || 0));
+  if (loadedVideoId === p.id && !autoplay) return true;
+  loadedVideoId = p.id;
+  preview.loadVideoById({ videoId:p.id, startSeconds:from });
+  preview.playVideo();
+  return true;
 }
 
 $('in-url').addEventListener('input', () => {
   const p = parseYouTube($('in-url').value);
-  if (p && p.t > 0) setTimeInputs(p.t);
+  if (!p) return;
+  if (p.t > 0) setTimeInputs(p.t);
+  clearTimeout(urlTimer);
+  urlTimer = setTimeout(() => {
+    if (loadPreview(p.t > 0 ? p.t : 0, true)){
+      msg('add-msg','재생을 시작했어요. 듣다가 원하는 순간에 「📍 여기부터!」를 누르세요.', true);
+    }
+  }, 500);
 });
 
+// 현재 재생 지점을 계속 보여줍니다
+setInterval(() => {
+  if (!previewReady) return;
+  try{
+    const t = preview.getCurrentTime();
+    if (typeof t === 'number' && !isNaN(t)) $('live-time').textContent = fmtTime(t);
+  }catch(e){}
+}, 250);
+
 $('btn-preview').onclick = () => {
+  if (IS_FILE) return msg('add-msg','파일로 열면 미리듣기가 안 돼요. https:// 주소로 접속해주세요.');
   const p = parseYouTube($('in-url').value);
   if (!p) return msg('add-msg','유튜브 링크를 먼저 넣어주세요.');
   if (!previewReady) return msg('add-msg','플레이어를 불러오는 중이에요. 잠시만요.');
-  preview.loadVideoById({ videoId:p.id, startSeconds:startSeconds() });
-  preview.playVideo();
-  msg('add-msg','막대를 움직여 원하는 지점을 찾은 뒤 아래 버튼을 누르세요.', true);
+  loadedVideoId = null;
+  loadPreview(startSeconds(), true);
+  msg('add-msg', `${fmtTime(startSeconds())} 지점부터 들려드릴게요.`, true);
 };
 
 $('btn-grab').onclick = () => {
-  if (!previewReady) return;
-  setTimeInputs(preview.getCurrentTime());
-  msg('add-msg', `${fmtTime(startSeconds())} 지점으로 맞췄어요.`, true);
+  if (IS_FILE) return msg('add-msg','파일로 열면 미리듣기가 안 돼요. https:// 주소로 접속해주세요.');
+  if (!previewReady) return msg('add-msg','아직 재생 준비가 안 됐어요.');
+  const t = preview.getCurrentTime();
+  if (typeof t !== 'number' || isNaN(t)) return msg('add-msg','먼저 재생을 시작해주세요.');
+  setTimeInputs(t);
+  msg('add-msg', `📍 ${fmtTime(t)} 지점을 시작점으로 잡았어요.`, true);
+};
+
+// 잡은 지점에서 제한시간만큼만 들어보기 (실제 게임과 똑같이)
+$('btn-testplay').onclick = () => {
+  if (IS_FILE) return msg('add-msg','파일로 열면 미리듣기가 안 돼요. https:// 주소로 접속해주세요.');
+  if (!previewReady) return msg('add-msg','아직 재생 준비가 안 됐어요.');
+  const p = parseYouTube($('in-url').value);
+  if (!p) return msg('add-msg','유튜브 링크를 먼저 넣어주세요.');
+  const from = startSeconds();
+  const dur  = Math.max(5, Math.min(90, parseInt($('in-timelimit').value,10) || TIME_LIMIT));
+  loadedVideoId = null;
+  loadPreview(from, true);
+  clearTimeout(testStop);
+  testStop = setTimeout(() => { try{ preview.pauseVideo(); }catch(e){} }, dur*1000);
+  msg('add-msg', `게임과 똑같이 ${fmtTime(from)}부터 ${dur}초만 들려드릴게요.`, true);
 };
 
 function renderLibrary(){
   $('manage-count').textContent = `(${library.length}곡)`;
   show('song-empty', library.length===0);
-  $('songlist').innerHTML = library.map((s,i)=>
-    `<li class="song-item">
+  $('songlist').innerHTML = library.map((s,i)=>{
+    const tl = Number(s.tl) > 0 ? Number(s.tl) : TIME_LIMIT;
+    const tlMark = Number(s.tl) > 0 ? '' : ' (기본)';
+    return `<li class="song-item">
        <div class="song-num">${i+1}</div>
        <div class="song-body">
          <div class="song-ttl">${esc(s.ti[0])}</div>
-         <div class="song-meta">${esc(s.ar[0])} · ${fmtTime(s.s)}부터 · ⏱️${s.tl || 15}초 · ${s.h ? '💡 직접 입력' : '초성 힌트'}</div>
+         <div class="song-meta">${esc(s.ar[0])} · ${fmtTime(s.s)}부터 · ⏱️${tl}초${tlMark} · ${s.h ? '💡 직접 입력' : '초성 힌트'}</div>
        </div>
        <button class="song-del" onclick="editSong(${i})" aria-label="수정">✎</button>
        <button class="song-del" onclick="deleteSong(${i})" aria-label="삭제">×</button>
-     </li>`).join('');
+     </li>`;
+  }).join('');
 }
 
 // ========== 방 ==========
@@ -1304,6 +1420,12 @@ function songAt(i){
 }
 const songCount = () => (room?.order || []).length;
 
+// 곡에 저장된 제한시간을 읽어옵니다. 값이 없거나 이상하면 기본값(TIME_LIMIT)
+function limitOf(song){
+  const t = Number(song?.tl);
+  return (t > 0) ? t : TIME_LIMIT;
+}
+
 const myPlayer = () => room?.players?.[me] || {};
 const amSpec   = () => !!myPlayer().spectator;
 const contenders = () => Object.entries(room?.players||{}).filter(([,p]) => !p.spectator);
@@ -1370,7 +1492,7 @@ async function submitAnswer(){
   const after = await runTransaction(ref(db,`rooms/${roomCode}/players/${me}/score`), s => (s||0) + 1);
 
   if ((after.snapshot.val() || 0) >= TARGET_SCORE){
-    const fin = await runTransaction(ref(db,`rooms/'+roomCode+'/finishers`), list => {
+    const fin = await runTransaction(ref(db,`rooms/${roomCode}/finishers`), list => {
       const arr = list || [];
       return arr.includes(me) ? undefined : [...arr, me];
     });
@@ -1542,10 +1664,10 @@ function tick(){
   }
 
   const song = songAt(r.idx);
-  const limit = song?.tl || TIME_LIMIT;  // 노래마다 설정된 제한시간, 없으면 기본값
+  const limit = limitOf(song);   // 곡별 제한시간, 없으면 기본값 30초
   const left = Math.max(0, limit - playPos());
   $('timer').textContent = Math.ceil(left);
-  $('timer').classList.toggle('hurry', left <= 10);
+  $('timer').classList.toggle('hurry', left <= HINT_AT);
 
   // 진행자가 강제로 힌트를 공개하거나, 남은 시간이 적으면 힌트 표시
   if (r.forceHint || left <= HINT_AT){
