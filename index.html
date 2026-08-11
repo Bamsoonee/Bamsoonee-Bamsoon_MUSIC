@@ -182,14 +182,47 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 .chip{background:rgba(255,255,255,.07); border:1px solid var(--line); border-radius:999px; padding:7px 14px; font-size:14px; font-weight:600; display:flex; align-items:center; gap:6px}
 .chip.me{border-color:var(--pink); background:rgba(255,61,139,.14)}
 
-.songlist{margin:0 0 14px; padding:0; list-style:none; max-height:340px; overflow-y:auto}
-.song-item{display:flex; align-items:center; gap:10px; background:rgba(0,0,0,.25); border:1px solid var(--line); border-radius:12px; padding:11px 13px; margin-bottom:8px}
-.song-num{font-family:var(--display); color:var(--pink); font-size:16px; min-width:26px; text-align:center}
+.songlist{margin:0 0 12px; padding:0; list-style:none; max-height:420px; overflow-y:auto}
+.songlist::-webkit-scrollbar{width:6px}
+.songlist::-webkit-scrollbar-thumb{background:var(--line); border-radius:3px}
+
+.song-search{margin-bottom:12px; position:relative}
+.song-search input{padding-left:38px; font-size:14px}
+.song-search::before{
+  content:'🔍'; position:absolute; left:13px; top:50%; transform:translateY(-50%);
+  font-size:14px; opacity:.6; pointer-events:none; z-index:1;
+}
+
+.song-item{
+  display:flex; align-items:center; gap:12px;
+  background:rgba(0,0,0,.28); border:1px solid var(--line); border-radius:14px;
+  padding:12px 14px; margin-bottom:8px; transition:border-color .14s, background .14s;
+}
+.song-item:hover{border-color:var(--pink); background:rgba(255,61,139,.07)}
+.song-num{
+  flex:0 0 auto; width:30px; height:30px; border-radius:9px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--display); font-size:14px; color:var(--pink);
+  background:rgba(255,61,139,.14); border:1px solid rgba(255,61,139,.3);
+}
 .song-body{flex:1; min-width:0}
-.song-ttl{font-weight:700; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.song-meta{color:var(--dim); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.song-del{background:none; border:none; color:var(--dim); font-size:20px; padding:4px 8px; line-height:1}
-.song-del:hover{color:var(--pink)}
+.song-ttl{font-weight:700; font-size:15.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.35}
+.song-artist{color:var(--dim); font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:5px}
+.song-tags{display:flex; flex-wrap:wrap; gap:5px}
+.tag{
+  font-size:11px; font-weight:700; padding:2px 8px; border-radius:6px;
+  background:rgba(255,255,255,.07); color:var(--dim); border:1px solid var(--line);
+  white-space:nowrap;
+}
+.tag.time{color:var(--cyan); border-color:rgba(53,232,224,.35); background:rgba(53,232,224,.1)}
+.tag.limit{color:var(--gold); border-color:rgba(255,201,61,.35); background:rgba(255,201,61,.1)}
+.tag.basic{opacity:.65}
+.song-acts{flex:0 0 auto; display:flex; flex-direction:column; gap:4px}
+.song-del{
+  background:rgba(255,255,255,.06); border:1px solid var(--line); color:var(--dim);
+  font-size:15px; padding:5px 10px; line-height:1; border-radius:8px; width:38px;
+}
+.song-del:hover{color:var(--pink); border-color:var(--pink)}
 .empty{text-align:center; color:var(--dim); font-size:14px; padding:26px 14px; border:1px dashed var(--line); border-radius:12px; margin-bottom:14px}
 
 /* ---------- 시작 지점 고르기 ---------- */
@@ -542,6 +575,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
   <div id="screen-manage" class="hidden">
     <div class="card">
       <h2>등록된 노래 <span id="manage-count" style="color:var(--dim)"></span></h2>
+      <div class="song-search">
+        <input id="song-filter" placeholder="제목이나 가수로 찾기" autocomplete="off">
+      </div>
       <ul class="songlist" id="songlist"></ul>
       <div class="empty" id="song-empty">아직 등록된 노래가 없어요.<br>여기 추가하면 모든 방에 계속 남아요.</div>
       <button class="btn-sub" id="btn-bulk-time" style="width:100%; border-color:var(--gold); color:var(--gold); font-weight:700">
@@ -1229,22 +1265,45 @@ $('btn-testplay').onclick = () => {
 };
 
 function renderLibrary(){
-  $('manage-count').textContent = `(${library.length}곡)`;
-  show('song-empty', library.length===0);
-  $('songlist').innerHTML = library.map((s,i)=>{
-    const tl = Number(s.tl) > 0 ? Number(s.tl) : TIME_LIMIT;
-    const tlMark = Number(s.tl) > 0 ? '' : ' (기본)';
+  const q = norm($('song-filter')?.value || '');
+  const rows = library
+    .map((s,i) => ({ s, i }))
+    .filter(({s}) => !q || s.ti.some(t=>norm(t).includes(q)) || s.ar.some(a=>norm(a).includes(q)));
+
+  $('manage-count').textContent = q
+    ? `(${rows.length} / ${library.length}곡)`
+    : `(${library.length}곡)`;
+  show('song-empty', library.length === 0);
+
+  if (library.length && !rows.length){
+    $('songlist').innerHTML =
+      `<li class="empty" style="margin:0">'${esc($('song-filter').value)}' 로 찾은 노래가 없어요.</li>`;
+    return;
+  }
+
+  $('songlist').innerHTML = rows.map(({s,i}) => {
+    const hasTl = Number(s.tl) > 0;
+    const tl = hasTl ? Number(s.tl) : TIME_LIMIT;
     return `<li class="song-item">
        <div class="song-num">${i+1}</div>
        <div class="song-body">
          <div class="song-ttl">${esc(s.ti[0])}</div>
-         <div class="song-meta">${esc(s.ar[0])} · ${fmtTime(s.s)}부터 · ⏱️${tl}초${tlMark} · ${s.h ? '💡 직접 입력' : '초성 힌트'}</div>
+         <div class="song-artist">${esc(s.ar[0])}</div>
+         <div class="song-tags">
+           <span class="tag time">▶ ${fmtTime(s.s)}</span>
+           <span class="tag limit${hasTl ? '' : ' basic'}">⏱️ ${tl}초${hasTl ? '' : ' 기본'}</span>
+           <span class="tag">${s.h ? '💡 힌트 직접' : '초성 힌트'}</span>
+         </div>
        </div>
-       <button class="song-del" onclick="editSong(${i})" aria-label="수정">✎</button>
-       <button class="song-del" onclick="deleteSong(${i})" aria-label="삭제">×</button>
+       <div class="song-acts">
+         <button class="song-del" onclick="editSong(${i})" aria-label="수정" title="수정">✎</button>
+         <button class="song-del" onclick="deleteSong(${i})" aria-label="삭제" title="삭제">×</button>
+       </div>
      </li>`;
   }).join('');
 }
+
+$('song-filter').addEventListener('input', renderLibrary);
 
 // ========== 방 ==========
 $('btn-create').onclick = async () => {
