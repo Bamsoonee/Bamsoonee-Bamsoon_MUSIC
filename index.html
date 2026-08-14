@@ -360,16 +360,24 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 .rank.end-rank li {
   animation: popReveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   opacity: 0;
+  animation-delay: 0s;   /* renderRank()가 순위별로 JS에서 딜레이를 직접 넣어줘요 */
 }
-
-.rank.end-rank li:nth-child(1) { animation-delay: 0s; }
-.rank.end-rank li:nth-child(2) { animation-delay: 0.3s; }
-.rank.end-rank li:nth-child(3) { animation-delay: 0.6s; }
 
 .humor-card.animate {
   animation: humorPop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   opacity: 0;
 }
+
+/* ---------- 첫 화면: 배너·카드가 한 개씩 통통 튀며 나타나요 ---------- */
+#screen-landing.play-intro > * {
+  opacity: 0;
+  animation: popReveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+#screen-landing.play-intro > *:nth-child(1) { animation-delay: 0s; }
+#screen-landing.play-intro > *:nth-child(2) { animation-delay: .15s; }
+#screen-landing.play-intro > *:nth-child(3) { animation-delay: .3s; }
+#screen-landing.play-intro > *:nth-child(4) { animation-delay: .45s; }
+#screen-landing.play-intro > *:nth-child(5) { animation-delay: .6s; }
 
 /* ---------- 결과 발표: 1·2·3등 슬라이드 + 아차상 ---------- */
 .podium{
@@ -1168,8 +1176,18 @@ import { getDatabase, ref, set, get, update, onValue, runTransaction, serverTime
 const $ = id => document.getElementById(id);
 const show = (id, on=true) => $(id).classList.toggle('hidden', !on);
 
+// 사이트에 처음 딱 들어왔을 때, 배너·게임 카드가 위에서부터 한 개씩 통통 튀며 나타나요
+// (뒤로가기로 다시 돌아올 땐 재생되지 않고, 맨 처음 접속했을 때만 한 번 재생돼요)
+function playLandingIntro(){
+  const el = $('screen-landing');
+  el.classList.remove('play-intro');
+  void el.offsetWidth;
+  el.classList.add('play-intro');
+}
+
 if (!FIREBASE_CONFIG.databaseURL){ show('gate', true); throw new Error('Firebase 설정 없음'); }
 window.__booted = true;
+playLandingIntro();
 
 $('btn-game-song').onclick  = () => { enterGame('song', 'normal'); show('screen-landing', false); show('screen-home', true); };
 $('btn-to-landing').onclick = () => { show('screen-home', false); show('screen-landing', true); };
@@ -2305,7 +2323,7 @@ function playHumorMarquee(candidates, winnerName, onDone){
       el.textContent = winnerName;
       void el.offsetWidth;
       el.classList.add('settle');
-      $('humor-pool-note').textContent = `아챠챠! 상품이 ${winnerName}에게 떨어졌다!`;
+      $('humor-pool-note').textContent = `아챠챠! ${winnerName}에게 떨어졌다!`;
       endSeqTimer = setTimeout(onDone, 900);
       return;
     }
@@ -2326,7 +2344,7 @@ function showFinalResults(){
   show('humor-card', !!hu);
   if (hu) {
     $('humor-name').textContent = hu.name;
-    $('humor-pool-note-final').textContent = `아챠챠! 상품이 ${hu.name}에게 떨어졌다!`;
+    $('humor-pool-note-final').textContent = `아챠챠! ${hu.name}에게 떨어졌다!`;
     const humorCard = $('humor-card');
     humorCard.classList.add('animate');
     humorCard.style.animationDelay = '0.3s';
@@ -2500,7 +2518,9 @@ function renderRank(targetId){
   rankEl.innerHTML = list.map((p,i) => {
     const rank = p.place || (i+1);
     const buzzing = room.round?.buzz?.uid === p.uid;
-    return `<li class="${p.place?'done':''} ${room.round?.tried?.[p.uid] && !p.place ? 'out':''}">
+    // 최종 결과 화면에서는 순위대로 한 명씩 통통 튀며 나타나게 순서대로 딜레이를 줘요
+    const delayStyle = isEndScreen ? ` style="animation-delay:${Math.min(i*0.12, 1.8)}s"` : '';
+    return `<li class="${p.place?'done':''} ${room.round?.tried?.[p.uid] && !p.place ? 'out':''}"${delayStyle}>
       <div class="pos">${MEDAL[rank] || rank}</div>
       <div class="nm">${buzzing?'🔔 ':''}${esc(p.name)}${p.uid===me?' <span style="color:var(--pink)">(나)</span>':''}${p.place?'<span class="badge">확정</span>':''}</div>
       <div class="sc">${p.score||0}</div>
