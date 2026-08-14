@@ -833,6 +833,11 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
           <label for="in-img-url">사진 링크</label>
           <input id="in-img-url" placeholder="https://... 이미지 링크 붙여넣기" autocomplete="off">
         </div>
+        <div class="divider">또는</div>
+        <div class="field">
+          <label for="in-img-file">📁 내 컴퓨터에서 사진 선택 <span style="color:var(--dim); font-weight:500">— 자동으로 크기를 줄여서 저장해요</span></label>
+          <input id="in-img-file" type="file" accept="image/*">
+        </div>
         <div class="field">
           <label for="in-name">이름 — 다르게 부를 수 있는 이름도 쉼표로</label>
           <input id="in-name" placeholder="아이유, iu, 이지은" autocomplete="off">
@@ -841,7 +846,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
           <label>🖼️ 사진 미리보기</label>
           <div class="preview-box" style="position:relative">
             <img id="person-img-preview" class="person-preview hidden" alt="">
-            <div class="person-preview-empty" id="person-preview-empty">사진 링크를 넣으면 여기에 미리보기가 나와요</div>
+            <div class="person-preview-empty" id="person-preview-empty">사진 링크를 넣거나 파일을 선택하면 여기에 미리보기가 나와요</div>
           </div>
         </div>
       </div>
@@ -1146,7 +1151,7 @@ const HINT_AT_HIDDEN = 10;   // 히든이벤트 — 남은 시간이 몇 초일 
 const HINT_AT_PERSON = 5;    // 인물맞추기 — 남은 시간이 몇 초일 때 힌트를 공개할지
 const MANAGER_PIN_NORMAL = "1234";   // 기본 노래맞추기 — 노래 관리 비밀번호
 const MANAGER_PIN_HIDDEN = "0522";   // 히든이벤트 — 입장 비밀번호 & 노래 관리 비밀번호
-const ENTRY_PIN_PERSON   = "0522";   // 인물맞추기 — 입장 비밀번호
+const ENTRY_PIN_PERSON   = "0522";   // 인물맞추기 — 입장 비밀번호 & 인물 관리 비밀번호
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, set, get, update, onValue, runTransaction, serverTimestamp, onDisconnect, push }
@@ -1427,8 +1432,8 @@ function msg(id,text,good=false){ const el=$(id); el.textContent=text; el.classN
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 // ======== 노래 관리 ========
-function managerPin(){ return mode === 'hidden' ? MANAGER_PIN_HIDDEN : MANAGER_PIN_NORMAL; }
-function mgrUnlockKey(){ return mode === 'hidden' ? 'mgr_hidden' : 'mgr'; }
+function managerPin(){ return gameType === 'person' ? ENTRY_PIN_PERSON : (mode === 'hidden' ? MANAGER_PIN_HIDDEN : MANAGER_PIN_NORMAL); }
+function mgrUnlockKey(){ return gameType === 'person' ? 'mgr_person' : (mode === 'hidden' ? 'mgr_hidden' : 'mgr'); }
 function isUnlocked(){ return !managerPin() || sessionStorage.getItem(mgrUnlockKey()) === 'ok'; }
 
 $('btn-manage').onclick = () => {
@@ -1450,9 +1455,13 @@ $('btn-pin-back').onclick = () => { show('screen-pin', false); show('screen-home
 
 $('btn-back').onclick = () => { show('screen-manage',false); show('screen-home',true); };
 
-// ---- 인물맞추기: 사진 링크 미리보기 ----
+// ---- 인물맞추기: 사진 링크 또는 내 컴퓨터 파일로 미리보기 ----
+// currentImgData가 있으면(=파일을 직접 선택했으면) 그게 우선이고,
+// 없으면 사진 링크 입력칸의 주소를 써요.
+let currentImgData = null;
+
 function updatePersonPreview(){
-  const url = $('in-img-url').value.trim();
+  const url = currentImgData || $('in-img-url').value.trim();
   const img = $('person-img-preview');
   if (url){
     img.src = url;
@@ -1462,14 +1471,64 @@ function updatePersonPreview(){
     img.src = '';
     show('person-img-preview', false);
     show('person-preview-empty', true);
-    $('person-preview-empty').textContent = '사진 링크를 넣으면 여기에 미리보기가 나와요';
+    $('person-preview-empty').textContent = '사진 링크를 넣거나 파일을 선택하면 여기에 미리보기가 나와요';
   }
 }
-$('in-img-url').addEventListener('input', updatePersonPreview);
+$('in-img-url').addEventListener('input', () => {
+  if ($('in-img-url').value.trim()) currentImgData = null;   // 링크를 새로 입력하면 파일 선택은 취소
+  updatePersonPreview();
+});
 $('person-img-preview').addEventListener('error', () => {
   show('person-img-preview', false);
   show('person-preview-empty', true);
   $('person-preview-empty').textContent = '이미지를 불러올 수 없어요. 링크를 확인해주세요.';
+});
+
+// 선택한 사진 파일을 적당한 크기로 줄여서(가장 긴 변 900px, JPG 품질 82%)
+// 데이터로 직접 바꿔줍니다. 이러면 사진 호스팅 사이트 없이도 바로 저장할 수 있어요.
+function readAndCompressImage(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('파일을 읽을 수 없어요.'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('이미지 파일이 아니거나 손상된 파일이에요.'));
+      img.onload = () => {
+        const MAX = 900;
+        let w = img.naturalWidth, h = img.naturalHeight;
+        if (w > MAX || h > MAX){
+          if (w >= h){ h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+$('in-img-file').addEventListener('change', async () => {
+  const file = $('in-img-file').files[0];
+  if (!file) return;
+  if (!file.type.startsWith('image/')){
+    msg('add-msg', '이미지 파일만 선택할 수 있어요.');
+    $('in-img-file').value = '';
+    return;
+  }
+  msg('add-msg', '사진을 불러오는 중…', true);
+  try{
+    currentImgData = await readAndCompressImage(file);
+    $('in-img-url').value = '';
+    updatePersonPreview();
+    msg('add-msg', `"${file.name}" 사진을 불러왔어요. 아래 미리보기를 확인하고 저장해주세요.`, true);
+  }catch(e){
+    msg('add-msg', e.message || '사진을 불러오지 못했어요.');
+    $('in-img-file').value = '';
+  }
 });
 
 $('btn-add').onclick = async () => {
@@ -1478,9 +1537,9 @@ $('btn-add').onclick = async () => {
   let entry, successMsg;
 
   if (gameType === 'person'){
-    const imgUrl = $('in-img-url').value.trim();
+    const imgUrl = currentImgData || $('in-img-url').value.trim();
     const names  = $('in-name').value.split(',').map(s=>s.trim()).filter(Boolean);
-    if (!imgUrl)       return msg('add-msg','사진 링크를 입력해주세요.');
+    if (!imgUrl)       return msg('add-msg','사진 링크를 입력하거나 파일을 선택해주세요.');
     if (!names.length) return msg('add-msg','이름을 입력해주세요.');
     entry = { img:imgUrl, ar:names, ti:names, tl:timeLimit };
     if (hint) entry.h = hint;
@@ -1524,7 +1583,14 @@ window.editSong = i => {
   $('in-hint').value = s.h || '';
   $('in-timelimit').value = Number(s.tl) > 0 ? Number(s.tl) : timeLimitDefault();
   if (gameType === 'person'){
-    $('in-img-url').value = s.img || '';
+    if ((s.img||'').startsWith('data:')){
+      currentImgData = s.img;
+      $('in-img-url').value = '';
+    } else {
+      currentImgData = null;
+      $('in-img-url').value = s.img || '';
+    }
+    $('in-img-file').value = '';
     $('in-name').value = (s.ar||[]).join(', ');
     updatePersonPreview();
   } else {
@@ -1545,6 +1611,8 @@ function cancelEdit(){
   editing = null;
   $('in-url').value=''; $('in-artist').value=''; $('in-title').value=''; $('in-hint').value='';
   $('in-img-url').value=''; $('in-name').value='';
+  currentImgData = null;
+  if ($('in-img-file')) $('in-img-file').value = '';
   updatePersonPreview();
   $('in-timelimit').value = String(timeLimitDefault());
   $('timelimit-default-label').textContent = String(timeLimitDefault());
