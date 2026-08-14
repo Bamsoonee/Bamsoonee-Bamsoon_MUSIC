@@ -22,7 +22,7 @@
   --paper:#F3E9FF; --dim:#A98CC4;
   --radius:18px;
   --display:'DNFBitBit', sans-serif;
-  --body:'Jua', sans-serif;
+  --body:'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
 html,body{margin:0; padding:0}
@@ -260,25 +260,6 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 .stage-cover{position:absolute; inset:0; z-index:5; background:radial-gradient(120% 90% at 50% 115%, rgba(255,61,139,.30) 0%, transparent 62%), linear-gradient(180deg,#1B0B29,#0C0513); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; text-align:center; padding:18px}
 .stage-cover.buzzed{background:radial-gradient(120% 90% at 50% 115%, rgba(255,201,61,.34) 0%, transparent 62%), linear-gradient(180deg,#2A1B05,#120A02)}
 
-/* 다 같이 준비될 때까지 기다리는 화면 */
-.waitcover{
-  position:absolute; inset:0; z-index:7;
-  background:linear-gradient(180deg,#1B0B29,#0C0513);
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:10px; text-align:center; padding:20px;
-}
-.wait-eyebrow{font-size:12px; letter-spacing:3px; color:var(--dim); font-weight:700}
-.wait-title{font-family:var(--display); font-size:clamp(20px,5.5vw,27px); color:#fff; line-height:1.3}
-.wait-sub{font-size:13px; color:var(--dim); line-height:1.6; max-width:400px}
-.wait-count{font-family:var(--display); font-size:30px; color:var(--cyan); font-variant-numeric:tabular-nums}
-.dots span{
-  display:inline-block; width:7px; height:7px; margin:0 3px; border-radius:50%;
-  background:var(--pink); animation:dotJump 1s ease-in-out infinite;
-}
-.dots span:nth-child(2){animation-delay:.15s}
-.dots span:nth-child(3){animation-delay:.3s}
-@keyframes dotJump{0%,100%{transform:translateY(0); opacity:.35} 50%{transform:translateY(-6px); opacity:1}}
-
 .tag.ad{color:#FF7A7A; border-color:rgba(255,122,122,.45); background:rgba(255,122,122,.12)}
 .song-item.adflag{border-color:rgba(255,122,122,.45)}
 .round-num{font-family:var(--display); font-size:14px; letter-spacing:4px; color:var(--dim)}
@@ -344,9 +325,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 
 .reveal{position:absolute; inset:0; z-index:6; background:linear-gradient(180deg, rgba(11,40,44,.97), rgba(6,20,26,.99)); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:20px; text-align:center; animation:popin .32s cubic-bezier(.2,1.3,.4,1)}
 @keyframes popin{from{opacity:0; transform:scale(.9)} to{opacity:1; transform:scale(1)}}
-.reveal .who{font-size:14px; color:var(--cyan); font-weight:700}
-.reveal .artist{font-size:13px; color:var(--dim); font-weight:600; letter-spacing:1px; opacity:.8}
-.reveal .title{font-family:var(--display); font-size:clamp(26px,8vw,40px); line-height:1.2; color:#fff; margin-top:3px}
+.reveal .who{font-size:15px; color:var(--cyan); font-weight:700}
+.reveal .artist{font-size:14px; color:var(--dim); font-weight:600; letter-spacing:1px; opacity:.8}
+.reveal .title{font-family:var(--display); font-size:clamp(20px,5.6vw,28px); line-height:1.35; color:#fff; margin-top:6px; padding:0 8px}
 .reveal .gain{color:var(--gold); font-weight:800; font-size:16px}
 .reveal.miss{background:linear-gradient(180deg, rgba(40,14,30,.97), rgba(20,6,14,.99))}
 .reveal.miss .who{color:var(--dim)}
@@ -359,18 +340,21 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
   box-shadow:0 8px 30px rgba(255,61,139,.42), inset 0 -4px 0 rgba(0,0,0,.22);
 }
 .buzzer:active{transform:translateY(3px); box-shadow:0 3px 14px rgba(255,61,139,.42), inset 0 -1px 0 rgba(0,0,0,.22)}
-.buzzer-hint{text-align:center; font-size:12px; color:var(--dim); margin-top:9px}
+.buzzer-hint{text-align:center; font-size:14px; color:var(--dim); margin-top:9px}
+.buzzer{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px}
+.buzzer .buzzer-title{font-family:var(--display); font-size:30px; letter-spacing:2px; line-height:1}
+.buzzer .buzzer-sub{font-family:var(--body); font-size:14px; font-weight:600; color:rgba(255,255,255,.86); letter-spacing:0}
 
 .locked{text-align:center; padding:20px; border-radius:var(--radius); border:1px solid var(--line); background:rgba(0,0,0,.25)}
 .locked .big{font-family:var(--display); font-size:21px; line-height:1.3}
-.locked .sub{font-size:13px; color:var(--dim); margin-top:5px}
+.locked .sub{font-size:14.5px; color:var(--dim); margin-top:5px}
 .locked.gold{border-color:rgba(255,201,61,.5); background:rgba(255,201,61,.12)}
 .locked.gold .big{color:var(--gold)}
 
 .answer-row{display:flex; gap:8px}
 .answer-row input{flex:1}
 .answer-row button{flex:0 0 auto; padding:13px 20px}
-.feedback{min-height:20px; font-size:13px; margin-top:8px; font-weight:600}
+.feedback{min-height:20px; font-size:14.5px; margin-top:8px; font-weight:600}
 .feedback.bad{color:var(--pink)} .feedback.good{color:var(--cyan)}
 .shake{animation:shake .34s}
 @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
@@ -385,20 +369,25 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 .rank li.out{opacity:.5}
 .badge{font-size:11px; background:var(--gold); color:#2A1A00; padding:2px 7px; border-radius:6px; font-weight:800; margin-left:6px}
 
-.note{font-size:13px; color:var(--dim); line-height:1.65; background:rgba(0,0,0,.22); border-left:3px solid var(--pink); border-radius:0 10px 10px 0; padding:12px 14px; margin-top:12px}
-.note code{background:rgba(255,255,255,.1); padding:1px 6px; border-radius:5px; font-size:12px; color:var(--cyan)}
+.note{font-size:14.5px; color:var(--dim); line-height:1.7; background:rgba(0,0,0,.22); border-left:3px solid var(--pink); border-radius:0 10px 10px 0; padding:12px 14px; margin-top:12px}
+.note code{background:rgba(255,255,255,.1); padding:1px 6px; border-radius:5px; font-size:13.5px; color:var(--cyan)}
 .toolbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:10px}
 .toolbar .status{font-size:13px; color:var(--dim); font-weight:600}
 .setup-steps{margin:0; padding-left:20px; font-size:14px; line-height:1.9}
 
-/* ========== 채팅 패널 ========== */
+/* ========== 채팅 패널 (항상 우측 하단에 떠있음) ========== */
 .chat-panel{
-  position:fixed; bottom:60px; right:16px; width:280px; height:340px;
+  position:fixed; bottom:16px; right:16px; width:290px; height:360px;
   background:linear-gradient(180deg,var(--panel-2),var(--panel));
   border:1px solid var(--line); border-radius:var(--radius);
-  display:flex; flex-direction:column; box-shadow:0 8px 32px rgba(0,0,0,.4);
+  display:flex; flex-direction:column; overflow:hidden;
+  box-shadow:0 8px 32px rgba(0,0,0,.4);
   z-index:50; animation:slideIn .3s ease-out;
 }
+
+.chat-panel.collapsed{ height:auto; }
+.chat-panel.collapsed .chat-messages,
+.chat-panel.collapsed .chat-input-row{ display:none; }
 
 @keyframes slideIn {
   from { transform:translateY(20px); opacity:0 }
@@ -406,28 +395,32 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 }
 
 .chat-header{
-  padding:14px 16px; border-bottom:1px solid var(--line);
-  font-weight:700; font-size:13px; color:var(--cyan);
-  display:flex; align-items:center; gap:6px;
+  padding:12px 14px; border-bottom:1px solid var(--line);
+  font-weight:700; font-size:14px; color:var(--cyan);
+  display:flex; align-items:center; gap:6px; cursor:pointer; user-select:none;
 }
+.chat-panel.collapsed .chat-header{ border-bottom:none }
 
 .chat-header::before{
   content:'💬'; font-size:16px;
 }
 
+.chat-min{ margin-left:auto; font-size:13px; color:var(--dim); transition:transform .2s }
+.chat-panel.collapsed .chat-min{ transform:rotate(180deg) }
+
 .chat-messages{
-  flex:1; overflow-y:auto; padding:12px; 
+  flex:1; overflow-y:auto; padding:12px;
   display:flex; flex-direction:column; gap:8px;
 }
 
 .chat-msg{
-  display:flex; flex-direction:column; gap:2px; font-size:12px;
+  display:flex; flex-direction:column; gap:2px; font-size:13.5px;
 }
 
 .chat-msg.me{align-items:flex-end}
 
 .chat-msg-name{
-  font-weight:600; color:var(--cyan); font-size:11px;
+  font-weight:600; color:var(--cyan); font-size:12px;
 }
 
 .chat-msg.me .chat-msg-name{
@@ -444,34 +437,39 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 }
 
 .chat-input-row{
-  padding:10px 12px; border-top:1px solid var(--line); display:flex; gap:6px;
+  padding:10px 12px; border-top:1px solid var(--line); display:flex; gap:6px; margin:0;
 }
 
 .chat-input-row input{
-  flex:1; padding:8px 12px; font-size:13px; margin:0; height:36px;
+  flex:1; padding:8px 12px; font-size:13.5px; margin:0; height:36px;
 }
 
 .chat-input-row button{
-  padding:8px 12px; font-size:13px; margin:0; width:auto; flex:0 0 auto; height:36px;
+  padding:8px 12px; font-size:13.5px; margin:0; width:auto; flex:0 0 auto; height:36px;
 }
 
 .chat-empty{
-  text-align:center; color:var(--dim); font-size:12px; 
+  text-align:center; color:var(--dim); font-size:13px;
   padding:60px 16px; flex:1; display:flex; align-items:center; justify-content:center;
 }
 
-.chat-toggle{
-  position:fixed; bottom:16px; right:16px; width:48px; height:48px;
-  border-radius:50%; background:linear-gradient(135deg,var(--cyan),#2BB6E0);
-  color:#fff; border:none; font-size:20px; cursor:pointer;
-  box-shadow:0 4px 16px rgba(53,232,224,.3);
-  display:flex; align-items:center; justify-content:center; z-index:49;
-  transition:transform .2s;
+/* ========== 게임 규칙 요약 탭 (클릭 안 되는 네모 박스, 왼쪽 중간 고정) ========== */
+.rule-tab{
+  position:fixed; left:18px; top:50%; transform:translateY(-50%);
+  width:196px; z-index:20; cursor:default;
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));
+  border:1px solid var(--line); border-radius:14px;
+  padding:14px 16px; box-shadow:0 8px 24px rgba(0,0,0,.35);
 }
-
-.chat-toggle:active{transform:scale(.9)}
-
-.chat-toggle.hidden{display:none}
+.rule-tab-label{
+  font-weight:800; font-size:13px; color:var(--cyan); letter-spacing:.5px; margin-bottom:9px;
+}
+.rule-tab-list{
+  margin:0; padding-left:16px; font-size:12.5px; color:var(--dim); line-height:1.85;
+}
+.rule-tab-list b{ color:var(--paper) }
+/* 화면이 좁으면(모바일 등) 본문을 가리지 않도록 숨깁니다 */
+@media (max-width: 1150px){ .rule-tab{ display:none !important; } }
 
 @media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important} }
 </style>
@@ -488,20 +486,28 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 
 <div class="wrap">
 
-  <!-- ========== 채팅 UI ========== -->
-  <button class="chat-toggle hidden" id="chat-toggle-btn">
-    <img src="moon.png" alt="채팅" style="width:28px; height:28px; filter:brightness(1.2)">
-  </button>
-  
+  <!-- ========== 채팅 UI (클릭해서 여는 방식이 아니라 항상 떠있고, 눌러서 접었다 펼 수만 있어요) ========== -->
   <div class="chat-panel hidden" id="chat-panel">
-    <div class="chat-header">채팅 (CHAT)</div>
+    <div class="chat-header" id="chat-header">채팅 (CHAT)<span class="chat-min" id="chat-min-icon">▾</span></div>
     <div class="chat-messages" id="chat-messages">
       <div class="chat-empty">메시지가 없어요</div>
     </div>
-    <div class="chat-input-row">
+    <form class="chat-input-row" id="chat-form" autocomplete="off">
       <input id="chat-input" type="text" placeholder="메시지 입력" autocomplete="off" maxlength="80">
-      <button id="chat-send" class="btn-go">전송</button>
-    </div>
+      <button id="chat-send" class="btn-go" type="submit">전송</button>
+    </form>
+  </div>
+
+  <!-- ========== 게임 규칙 요약 (클릭 안 되는 네모 탭, 화면 왼쪽 중간에 고정) ========== -->
+  <div class="rule-tab hidden" id="rule-tab">
+    <div class="rule-tab-label">📋 게임 규칙 요약</div>
+    <ul class="rule-tab-list">
+      <li>정답 = <b>가수+제목</b> (예: 뉴진스 하입보이)</li>
+      <li>부저 후 <b>10초</b> 안에 입력</li>
+      <li>정답 <b>+1점</b> · 오답 <b>−1점</b></li>
+      <li>오답한 문제는 재도전 불가</li>
+      <li>과반수가 누르면 다음 곡</li>
+    </ul>
   </div>
 
   <div id="boot-error" class="card hidden" style="border-color:var(--pink)">
@@ -710,7 +716,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
         <h2 style="margin:0; flex:1">📋 게임 규칙</h2>
         <span id="rules-icon" style="font-size:20px; color:var(--cyan); transition:transform .2s">▼</span>
       </div>
-      <div id="rules-content" style="margin-top:12px; font-size:13px; line-height:1.8; color:var(--paper)">
+      <div id="rules-content" style="margin-top:12px; font-size:15.5px; line-height:1.85; color:var(--paper)">
         <div style="margin-bottom:14px">
           <b style="color:var(--cyan)">1️⃣ 정답 입력 규칙</b>
           <div style="margin-top:6px; margin-left:12px; color:var(--dim)">
@@ -777,13 +783,6 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
         </div>
         <div class="eq" id="eq"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
       </div>
-      <div class="waitcover hidden" id="stage-wait">
-        <div class="wait-eyebrow" id="wait-round">ROUND 1</div>
-        <div class="wait-title">다 같이 시작할 준비 중</div>
-        <div class="wait-count" id="wait-count">0 / 0</div>
-        <div class="dots"><span></span><span></span><span></span></div>
-        <div class="wait-sub">광고가 나오는 사람은 광고가 끝날 때까지 기다려요.<br>모두 준비되면 동시에 노래가 시작됩니다.</div>
-      </div>
       <div class="reveal hidden" id="stage-error" style="background:linear-gradient(180deg, rgba(48,12,12,.97), rgba(24,6,6,.99))">
         <div class="who" style="color:var(--pink)">재생 오류</div>
         <div class="artist" id="stage-error-text" style="font-size:15px; line-height:1.5"></div>
@@ -791,7 +790,6 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
       </div>
       <div class="reveal hidden" id="reveal">
         <div class="who" id="reveal-who"></div>
-        <div class="artist" id="reveal-artist"></div>
         <div class="title" id="reveal-title"></div>
         <div class="gain" id="reveal-gain"></div>
       </div>
@@ -805,8 +803,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
     </div>
 
     <div id="state-buzz" class="hidden" style="margin-bottom:14px">
-      <button class="buzzer" id="btn-buzzer">정답!</button>
-      <div class="buzzer-hint">먼저 누른 사람만 답할 수 있어요 · PC는 스페이스바</div>
+      <button class="buzzer" id="btn-buzzer">
+        <span class="buzzer-title">정답!</span>
+        <span class="buzzer-sub">먼저 누른 사람만 답할 수 있어요 · PC는 스페이스바</span>
+      </button>
     </div>
 
     <div id="state-answer" class="card hidden">
@@ -947,21 +947,14 @@ $('rules-toggle').onclick = () => {
   $('rules-icon').style.transform = rulesOpen ? 'rotate(0deg)' : 'rotate(-90deg)';
 };
 
-// ========== 채팅 기능 ==========
-let chatOpen = false;
+// ========== 채팅 기능 (항상 우측 하단에 떠있고, 헤더를 누르면 접었다 펼 수 있어요) ==========
+let chatCollapsed = false;
 const chatMessages = [];
 
-$('chat-toggle-btn').onclick = () => {
-  chatOpen = !chatOpen;
-  show('chat-panel', chatOpen);
-};
-
-function addChatMessage(uid, name, text){
-  chatMessages.push({uid, name, text});
-  renderChat();
-  const msgBox = $('chat-messages');
-  msgBox.scrollTop = msgBox.scrollHeight;
-}
+$('chat-header').addEventListener('click', () => {
+  chatCollapsed = !chatCollapsed;
+  $('chat-panel').classList.toggle('collapsed', chatCollapsed);
+});
 
 function renderChat(){
   const empty = chatMessages.length === 0;
@@ -979,29 +972,29 @@ function renderChat(){
 }
 
 async function sendChat(){
-  const text = $('chat-input').value.trim();
+  const input = $('chat-input');
+  const text = input.value.trim();
   if (!text || !roomCode) return;
-  
-  $('chat-input').value = '';
-  
-  // 로컬 먼저 표시
-  addChatMessage(me, myName, text);
-  
-  // Firebase에 저장
-  await push(ref(db, `rooms/${roomCode}/chat`), {
-    uid: me,
-    name: myName,
-    text: text,
-    at: serverTimestamp()
-  });
+
+  input.value = '';
+
+  try{
+    // Firebase에 저장 — onValue 구독이 이 메시지를 다시 받아 화면에 그려줍니다.
+    await push(ref(db, `rooms/${roomCode}/chat`), {
+      uid: me,
+      name: myName,
+      text: text,
+      at: serverTimestamp()
+    });
+  }catch(e){
+    // 전송 실패 시 입력한 내용을 되살려서 다시 보낼 수 있게 합니다.
+    input.value = text;
+  }
 }
 
-$('chat-send').onclick = sendChat;
-$('chat-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendChat();
-  }
+$('chat-form').addEventListener('submit', e => {
+  e.preventDefault();
+  sendChat();
 });
 
 onValue(ref(db, 'library'), snap => {
@@ -1452,14 +1445,11 @@ $('btn-ad-report').onclick = async () => {
 };
 
 // ========== 진행 ==========
-// 라운드는 두 단계로 진행돼요.
-//  1) loading — 각자 영상을 미리 불러오고, 광고가 있으면 음소거로 흘려보냅니다
-//  2) playing — 모두 준비되면 그때 동시에 노래가 시작되고 타이머가 돕니다
+// 라운드가 열리면 곧바로 노래가 재생됩니다 (광고 대기 없음)
 const newRound = idx => ({
   idx,
   rid: Math.random().toString(36).slice(2,10),
-  phase: 'loading',
-  startAt: null,
+  startAt: serverTimestamp(),
   bonusMs: 0,
   winner: null,
   revealed: false
@@ -1532,8 +1522,7 @@ async function restartGame(){
     patch[`players/${uid}/score`] = 0;
     patch[`players/${uid}/place`] = null;
   });
-  lastRoundKey=''; nextScheduled=''; lastPhase=''; startedRid='';
-  clearPrep(); clearTimeout(hostStartTimer);
+  lastRoundKey=''; nextScheduled='';
   await update(ref(db,'rooms/'+roomCode), patch);
 }
 $('btn-restart').onclick = restartGame;
@@ -1557,79 +1546,18 @@ const amDone   = () => !!myPlayer().place;
 
 function playPos(){
   const r = room.round;
-  if (!r.startAt || r.phase !== 'playing') return 0;
+  if (!r.startAt) return 0;
   return Math.max(0, (now() - r.startAt - (r.bonusMs||0)) / 1000);
 }
 
-// ========== 광고 흘려보내기 · 동시 시작 ==========
-// 유튜브 광고는 끌 수 없지만, 광고가 도는 동안 음소거로 지나 보내고
-// 참가자 전원이 준비된 다음에 노래를 동시에 시작할 수는 있어요.
-let prepTimer = null, prepGiveUp = null, hostStartTimer = null;
-let lastPhase = '', startedRid = '';
-const PREP_LIMIT_MS = 40000;   // 광고가 아무리 길어도 40초 뒤엔 그냥 시작
-
-// 지금 나오는 게 광고인지 판단합니다.
-// 광고 중에는 재생 시간이 0부터 흐르고, 길이도 실제 곡보다 훨씬 짧아요.
-function contentStarted(song){
-  if (!ytReady) return false;
-  let t, d;
-  try{ t = player.getCurrentTime(); d = player.getDuration(); }catch(e){ return false; }
-  if (!d || d <= 0) return false;
-  if (song.s >= 5) return t >= song.s - 1.5;   // 지정한 지점까지 왔으면 본편
-  return d > 90;                               // 0초부터 시작하는 곡은 길이로 판단
-}
-
-function clearPrep(){
-  clearInterval(prepTimer); prepTimer = null;
-  clearTimeout(prepGiveUp); prepGiveUp = null;
-}
-
-// 새 라운드가 열리면 조용히 미리 불러둡니다
-function prepareRound(song){
-  clearPrep();
-  markReady(false);
-  if (!ytReady){ markReady(true); return; }
-
-  try{
-    player.mute();                                   // 광고 소리 차단
-    player.loadVideoById({ videoId: song.v, startSeconds: song.s });
-    player.playVideo();
-  }catch(e){ markReady(true); return; }
-
-  prepTimer = setInterval(() => {
-    if (!contentStarted(song)) return;
-    clearPrep();
-    try{ player.pauseVideo(); player.seekTo(song.s, true); }catch(e){}
-    markReady(true);
-  }, 300);
-
-  prepGiveUp = setTimeout(() => { clearPrep(); markReady(true); }, PREP_LIMIT_MS);
-}
-
-function markReady(on){
-  if (!roomCode || !room?.round?.rid) return;
-  set(ref(db,`rooms/${roomCode}/round/rdy/${me}`), on ? true : null);
-}
-
-// 모두 준비되면 진행자가 신호를 보냅니다
-async function beginRound(rid){
-  if (startedRid === rid) return;
-  startedRid = rid;
-  clearTimeout(hostStartTimer);
-  await update(ref(db,`rooms/${roomCode}/round`), {
-    phase: 'playing',
-    startAt: serverTimestamp()
-  });
-}
-
-// 신호가 오면 다 같이 소리를 켜고 재생합니다
+// ========== 재생 시작 ==========
+// 라운드가 열리면 각자 화면에서 곧바로 노래를 불러와 재생합니다.
 function startPlayback(song){
-  clearPrep();
   if (!ytReady) return;
   try{
     player.unMute();
     player.setVolume(100);
-    player.seekTo(song.s + playPos(), true);
+    player.loadVideoById({ videoId: song.v, startSeconds: song.s + playPos() });
     player.playVideo();
   }catch(e){}
 }
@@ -1654,15 +1582,18 @@ document.addEventListener('keydown', e => {
   }
 });
 
-async function failBuzz(buzz){
+async function failBuzz(buzz, answerText){
   const claim = await runTransaction(ref(db,`rooms/${roomCode}/round/tried/${buzz.uid}`), cur =>
     cur ? undefined : true);
   if (!claim.committed) return;
 
+  const lastFail = { name: buzz.name, at: now() };
+  if (answerText) lastFail.answer = answerText;
+
   await update(ref(db,`rooms/${roomCode}/round`), {
     buzz: null,
     bonusMs: (room.round.bonusMs || 0) + (now() - buzz.at),
-    lastFail: { name: buzz.name, at: now() }
+    lastFail
   });
   await runTransaction(ref(db,`rooms/${roomCode}/players/${buzz.uid}/score`), s => (s||0) - 1);
 }
@@ -1678,11 +1609,11 @@ async function submitAnswer(){
   $('answer').value = '';
 
   if (!isCorrect(text, songAt(r.idx))){
-    msg('answer-msg','아니에요. −1점!');
+    msg('answer-msg', `"${text}" — 아니에요. −1점!`);
     $('answer').classList.remove('shake');
     void $('answer').offsetWidth;
     $('answer').classList.add('shake');
-    await failBuzz(buzz);
+    await failBuzz(buzz, text);
     return;
   }
 
@@ -1723,14 +1654,16 @@ function render(){
   show('screen-game',  room.status==='playing');
   show('screen-end',   room.status==='ended');
   show('host-controls', isHost && room.status==='playing');
-  show('chat-toggle-btn', room.status==='playing');  // 게임 중일 때만 채팅 버튼 표시
+  // 로비·게임 중에는 항상 채팅창이 떠있어요 (열려고 따로 누를 필요 없음)
+  show('chat-panel', room.status==='lobby' || room.status==='playing');
+  show('rule-tab',   room.status==='lobby' || room.status==='playing');
 
   if (room.status === 'playing') renderGame();
   if (room.status === 'ended'){
     if (tickTimer){ clearInterval(tickTimer); tickTimer=null; }
     if (ytReady) player.stopVideo();
-    chatOpen = false;
     show('chat-panel', false);
+    show('rule-tab', false);
     renderRank('final-rank');
     const hu = room.humor && room.players?.[room.humor];
     show('humor-card', !!hu);
@@ -1753,45 +1686,23 @@ function renderGame(){
     return;
   }
   const over = r.revealed || !!r.winner;
-  const prepping = r.phase !== 'playing' && !over;
 
   const key = r.rid || (r.idx + '_' + r.startAt);
   if (key !== lastRoundKey){
-    lastRoundKey = key; lastBuzzKey = ''; lastPhase = '';
+    lastRoundKey = key; lastBuzzKey = '';
     $('answer-msg').textContent=''; $('answer').value='';
     show('hint', false);
     show('stage-error', false);
     $('btn-ad-report').disabled = false;
     $('btn-ad-report').textContent = '📢 광고 나왔어요';
     if (tickTimer){ clearInterval(tickTimer); tickTimer = null; }
-    if (r.phase !== 'playing') prepareRound(song);   // 조용히 미리 불러두기
-    if (isHost){
-      clearTimeout(hostStartTimer);
-      hostStartTimer = setTimeout(() => beginRound(key), PREP_LIMIT_MS + 3000);
-    }
-  }
-
-  // 준비 화면 표시 · 모두 준비됐는지 확인
-  show('stage-wait', prepping);
-  if (prepping){
-    const ids = Object.keys(room.players || {}).filter(uid => room.players[uid].online !== false);
-    const ready = ids.filter(uid => r.rdy?.[uid]).length;
-    $('wait-round').textContent = `ROUND ${r.idx+1}`;
-    $('wait-count').textContent = `${ready} / ${ids.length}`;
-    if (isHost && ids.length && ready >= ids.length) beginRound(key);
-  }
-
-  // 시작 신호가 오면 모두 동시에 재생
-  if (r.phase === 'playing' && lastPhase !== 'playing'){
-    lastPhase = 'playing';
     startPlayback(song);
-    if (tickTimer) clearInterval(tickTimer);
     tickTimer = setInterval(tick, 200);
     tick();
   }
 
   const buzzKey = r.buzz ? String(r.buzz.at) : 'none';
-  if (buzzKey !== lastBuzzKey && !prepping){
+  if (buzzKey !== lastBuzzKey){
     lastBuzzKey = buzzKey;
     if (ytReady && !over){
       if (r.buzz) player.pauseVideo();
@@ -1819,19 +1730,23 @@ function renderGame(){
   }
 
   const spec = amSpec();
-  show('state-spectator', spec && !prepping);
-  show('state-done',    !spec && done && !prepping);
-  show('state-answer',  !spec && !done && iBuzz && !over && !prepping);
-  show('state-waiting', !spec && !!r.buzz && !iBuzz && !over && !prepping);
-  show('state-used',    !spec && !done && !r.buzz && tried && !over && !prepping);
-  show('state-buzz',    !spec && !done && !r.buzz && !tried && !over && !prepping);
-  show('state-next',    over);
+  show('state-spectator', spec);
+  show('state-done',    !spec && done);
+  show('state-answer',  !spec && !done && iBuzz && !over);
+  show('state-waiting', !spec && !!r.buzz && !iBuzz && !over);
+  show('state-used',    !spec && !done && !r.buzz && tried && !over);
+  show('state-buzz',    !spec && !done && !r.buzz && !tried && !over);
+  show('state-next',    over && !done);
   show('btn-reveal',    !over);
   show('btn-force',     over);
 
   const showFail = !!r.lastFail && !r.buzz && !over;
   show('fail-flash', showFail);
-  if (showFail) $('fail-text').textContent = `${r.lastFail.name}님 실패 · −1점`;
+  if (showFail){
+    $('fail-text').textContent = r.lastFail.answer
+      ? `${r.lastFail.name}님 오답: "${r.lastFail.answer}" · −1점`
+      : `${r.lastFail.name}님 시간 초과 · −1점`;
+  }
 
   if (done)  $('done-place').textContent  = `${MEDAL[myPlayer().place]||''} ${myPlayer().place}등 확정`;
   if (r.buzz && !iBuzz) $('waiting-who').textContent = `${r.buzz.name}님이 도전 중`;
@@ -1846,13 +1761,12 @@ function renderGame(){
     if (ytReady) player.pauseVideo();
     $('reveal').classList.toggle('miss', !r.winner);
     $('reveal-who').textContent    = r.winner ? `${r.winner.name} 정답!` : '아무도 못 맞췄어요';
-    $('reveal-artist').textContent = song.ar[0];
-    $('reveal-title').textContent  = song.ti[0];
+    $('reveal-title').textContent  = `${song.ar[0]} - ${song.ti[0]}`;
     $('reveal-gain').textContent   = r.winner ? '+1점' : '';
 
-    const ids    = contenders().map(([uid]) => uid);
+    const ids    = contenders().filter(([,p]) => !p.place).map(([uid]) => uid);
     const votes  = ids.filter(uid => r.ready?.[uid]).length;
-    const need   = Math.floor(ids.length/2) + 1;
+    const need   = ids.length ? Math.floor(ids.length/2) + 1 : 0;
 
     $('ready-count').textContent = `(${votes}/${need})`;
     $('btn-ready').disabled = amSpec() || !!r.ready?.[me];
@@ -1872,7 +1786,6 @@ function renderGame(){
 function tick(){
   if (!room || room.status !== 'playing') return;
   const r = room.round;
-  if (r.phase !== 'playing') return;
   if (r.revealed || r.winner) return;
 
   if (r.buzz){
