@@ -565,6 +565,26 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
   padding:60px 16px; flex:1; display:flex; align-items:center; justify-content:center;
 }
 
+/* ========== 인물맞추기: 사진을 실제로 보여줘야 하므로 무대 배경을 살짝 투명하게 ========== */
+#stage-person-img{
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1;
+}
+.stage.person-mode .stage-cover{
+  background:
+    radial-gradient(120% 90% at 50% 118%, rgba(255,61,139,.22) 0%, transparent 62%),
+    linear-gradient(180deg, rgba(12,5,19,.18) 0%, rgba(12,5,19,.5) 62%, rgba(12,5,19,.86) 100%);
+}
+.stage.person-mode .stage-cover.buzzed{
+  background:
+    radial-gradient(120% 90% at 50% 118%, rgba(255,201,61,.26) 0%, transparent 62%),
+    linear-gradient(180deg, rgba(24,15,3,.2) 0%, rgba(24,15,3,.55) 62%, rgba(24,15,3,.88) 100%);
+}
+.person-preview{width:100%; height:100%; object-fit:cover; background:#000}
+.person-preview-empty{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  color:var(--dim); font-size:13px; text-align:center; padding:12px;
+}
+
 /* ========== 게임 규칙 요약 탭 (클릭 안 되는 네모 박스, 왼쪽 중간 고정) ========== */
 .rule-tab{
   position:fixed; left:18px; top:50%; transform:translateY(-50%);
@@ -614,11 +634,11 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
   <div class="rule-tab hidden" id="rule-tab">
     <div class="rule-tab-label">📋 게임 규칙 요약</div>
     <ul class="rule-tab-list">
-      <li>정답 = <b>가수+제목</b> (예: 뉴진스 하입보이)</li>
+      <li id="rule-tab-answer-li">정답 = <b>가수+제목</b> (예: 뉴진스 하입보이)</li>
       <li>부저 후 <b>10초</b> 안에 입력</li>
       <li>정답 <b>+1점</b> · 오답 <b>−1점</b></li>
       <li>오답한 문제는 재도전 불가</li>
-      <li>과반수가 누르면 다음 곡</li>
+      <li>과반수가 누르면 다음 문제</li>
     </ul>
   </div>
 
@@ -661,20 +681,21 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
     </button>
     <button class="hidden-event-link" id="btn-hidden-event" type="button">🎉 히든이벤트</button>
 
-    <div class="game-card soon">
-      <div class="game-icon">✨</div>
+    <button class="game-card" id="btn-game-person">
+      <div class="game-icon">🙂</div>
       <div class="game-body">
-        <div class="game-name">다음 게임</div>
-        <div class="game-desc">준비 중이에요</div>
+        <div class="game-name">인물맞추기</div>
+        <div class="game-desc">사진을 보고 누군지 먼저 맞혀보세요</div>
       </div>
-    </div>
+      <div class="game-go">→</div>
+    </button>
   </div>
 
-  <!-- ========== 노래맞추기 시작 ========== -->
+  <!-- ========== 노래맞추기 / 인물맞추기 시작 (같은 화면을 같이 써요) ========== -->
   <div id="screen-home" class="hidden">
     <div class="page-head">
       <button class="btn-back" id="btn-to-landing" aria-label="뒤로">←</button>
-      <div class="page-title">🎵 노래맞추기</div>
+      <div class="page-title" id="home-title">🎵 노래맞추기</div>
     </div>
     <div class="feedback hidden" id="home-mode-badge" style="color:var(--gold); font-weight:800; margin:-8px 0 12px 4px"></div>
     <div class="card">
@@ -696,27 +717,14 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
       <button class="btn-go" id="btn-join">방 참가하기</button>
       <div class="feedback bad" id="home-msg"></div>
     </div>
-    <button class="btn-sub" id="btn-manage" style="width:100%">노래 관리 <span id="lib-count" style="color:var(--dim)"></span></button>
-  </div>
-
-  <!-- ========== 히든이벤트 입장 확인 ========== -->
-  <div id="screen-hidden-pw" class="hidden">
-    <div class="card">
-      <h2>🎉 히든이벤트 입장 비밀번호</h2>
-      <div class="field">
-        <label for="hidden-pw-input">비밀번호</label>
-        <input id="hidden-pw-input" type="password" inputmode="numeric" placeholder="숫자 비밀번호" autocomplete="off">
-      </div>
-      <button class="btn-main" id="btn-hidden-pw-ok">확인</button>
-      <div class="feedback bad" id="hidden-pw-msg"></div>
-    </div>
-    <button class="btn-sub" id="btn-hidden-pw-back" style="width:100%">돌아가기</button>
+    <button class="hidden-event-link" id="btn-test-room" type="button">🧪 테스트방 (혼자 테스트하기)</button>
+    <button class="btn-sub" id="btn-manage" style="width:100%"><span id="manage-btn-label">노래 관리</span> <span id="lib-count" style="color:var(--dim)"></span></button>
   </div>
 
   <!-- ========== 관리자 확인 ========== -->
   <div id="screen-pin" class="hidden">
     <div class="card">
-      <h2>노래는 방장만 건드릴 수 있어요</h2>
+      <h2>관리는 방장만 할 수 있어요</h2>
       <div class="field">
         <label for="pin-input">비밀번호</label>
         <input id="pin-input" type="password" inputmode="numeric" placeholder="숫자 비밀번호" autocomplete="off">
@@ -731,7 +739,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
   <div id="screen-manage" class="hidden">
     <div class="feedback hidden" id="manage-mode-badge" style="color:var(--gold); font-weight:800; margin:-4px 0 10px 4px"></div>
     <div class="card">
-      <h2>등록된 노래 <span id="manage-count" style="color:var(--dim)"></span></h2>
+      <h2><span id="manage-heading">등록된 노래</span> <span id="manage-count" style="color:var(--dim)"></span></h2>
       <div class="song-search">
         <input id="song-filter" placeholder="제목이나 가수로 찾기" autocomplete="off">
       </div>
@@ -739,67 +747,91 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
       <div class="empty" id="song-empty">아직 등록된 노래가 없어요.<br>여기 추가하면 모든 방에 계속 남아요.</div>
       <button class="btn-sub" id="btn-ad-filter" style="width:100%; margin-bottom:8px; color:#FF9A9A; border-color:rgba(255,122,122,.4); font-weight:700">📢 광고 신고된 곡만 보기</button>
       <button class="btn-sub" id="btn-bulk-time" style="width:100%; border-color:var(--gold); color:var(--gold); font-weight:700">
-        ⏱️ 모든 곡 제한시간을 30초로 맞추기
+        <span id="bulk-time-label">⏱️ 모든 곡 제한시간을 30초로 맞추기</span>
       </button>
       <div class="feedback" id="bulk-msg"></div>
     </div>
     <div class="card">
-      <h2>노래 추가</h2>
+      <h2 id="add-heading">노래 추가</h2>
       <div id="origin-info" style="font-size:12px; color:var(--dim); margin:-6px 0 14px; word-break:break-all"></div>
-      <div class="field">
-        <label for="in-url">유튜브 링크</label>
-        <input id="in-url" placeholder="https://youtu.be/... 붙여넣기" autocomplete="off">
+
+      <!-- 노래맞추기 전용 입력칸 -->
+      <div id="song-fields">
+        <div class="field">
+          <label for="in-url">유튜브 링크</label>
+          <input id="in-url" placeholder="https://youtu.be/... 붙여넣기" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="in-artist">가수 — 다르게 부를 수 있는 이름도 쉼표로</label>
+          <input id="in-artist" placeholder="뉴진스, newjeans, 뉴진즈" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="in-title">제목 — 영어·한글 표기 모두 쉼표로</label>
+          <input id="in-title" placeholder="하입보이, hype boy, 하이프보이" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>🎧 시작 지점 고르기 <span style="color:var(--dim); font-weight:500">— 링크를 넣으면 바로 재생돼요. 듣다가 원하는 순간에 버튼을 누르세요</span></label>
+        </div>
+
+        <div id="preview-wrap">
+          <div class="preview-box"><div id="yt-preview"></div></div>
+
+          <div class="grabber">
+            <div class="grab-now">
+              <div class="grab-label">지금 듣고 있는 지점</div>
+              <div class="grab-time" id="live-time">0:00</div>
+            </div>
+            <button class="btn-catch" id="btn-grab">📍 여기부터!</button>
+          </div>
+
+          <div class="picked" id="picked-box">
+            <div>
+              <span class="picked-label">선택한 시작 지점</span>
+              <span class="picked-time" id="picked-time">0:00</span>
+            </div>
+            <button class="btn-sub" id="btn-testplay" style="padding:9px 14px; font-size:13px">▶ 이대로 들어보기</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>직접 입력해도 돼요 <span style="color:var(--dim); font-weight:500">(분 : 초)</span></label>
+          <div class="timepick">
+            <input id="in-min" type="number" min="0" value="0" inputmode="numeric" aria-label="분">
+            <span class="colon">:</span>
+            <input id="in-sec" type="number" min="0" max="59" value="0" inputmode="numeric" aria-label="초">
+            <button class="btn-sub" id="btn-preview" style="flex:0 0 auto; padding:13px 16px">그 지점 듣기</button>
+          </div>
+        </div>
       </div>
-      <div class="field">
-        <label for="in-artist">가수 — 다르게 부를 수 있는 이름도 쉼표로</label>
-        <input id="in-artist" placeholder="뉴진스, newjeans, 뉴진즈" autocomplete="off">
+
+      <!-- 인물맞추기 전용 입력칸 -->
+      <div id="person-fields" class="hidden">
+        <div class="field">
+          <label for="in-img-url">사진 링크</label>
+          <input id="in-img-url" placeholder="https://... 이미지 링크 붙여넣기" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="in-name">이름 — 다르게 부를 수 있는 이름도 쉼표로</label>
+          <input id="in-name" placeholder="아이유, iu, 이지은" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>🖼️ 사진 미리보기</label>
+          <div class="preview-box" style="position:relative">
+            <img id="person-img-preview" class="person-preview hidden" alt="">
+            <div class="person-preview-empty" id="person-preview-empty">사진 링크를 넣으면 여기에 미리보기가 나와요</div>
+          </div>
+        </div>
       </div>
-      <div class="field">
-        <label for="in-title">제목 — 영어·한글 표기 모두 쉼표로</label>
-        <input id="in-title" placeholder="하입보이, hype boy, 하이프보이" autocomplete="off">
-      </div>
+
       <div class="field">
         <label for="in-hint">💡 힌트 — <span style="color:var(--dim); font-weight:500">직접 작성 (비워두면 초성이 자동으로 나와요)</span></label>
         <input id="in-hint" placeholder="예: 2022년 데뷔곡 / 광고에 많이 나온 그 노래" autocomplete="off">
       </div>
       <div class="field">
-        <label for="in-timelimit">⏱️ 제한시간 — <span style="color:var(--dim); font-weight:500">음악 들으면서 답하는 시간 (기본값: 30초)</span></label>
+        <label for="in-timelimit">⏱️ 제한시간 — <span style="color:var(--dim); font-weight:500" id="timelimit-desc">음악 들으면서 답하는 시간</span> (기본값: <span id="timelimit-default-label">30</span>초)</label>
         <div style="display:flex; align-items:center; gap:8px">
           <input id="in-timelimit" type="number" min="5" max="90" value="30" inputmode="numeric" style="flex:1">
           <span style="color:var(--dim); font-weight:600">초</span>
-        </div>
-      </div>
-      <div class="field">
-        <label>🎧 시작 지점 고르기 <span style="color:var(--dim); font-weight:500">— 링크를 넣으면 바로 재생돼요. 듣다가 원하는 순간에 버튼을 누르세요</span></label>
-      </div>
-
-      <div id="preview-wrap">
-        <div class="preview-box"><div id="yt-preview"></div></div>
-
-        <div class="grabber">
-          <div class="grab-now">
-            <div class="grab-label">지금 듣고 있는 지점</div>
-            <div class="grab-time" id="live-time">0:00</div>
-          </div>
-          <button class="btn-catch" id="btn-grab">📍 여기부터!</button>
-        </div>
-
-        <div class="picked" id="picked-box">
-          <div>
-            <span class="picked-label">선택한 시작 지점</span>
-            <span class="picked-time" id="picked-time">0:00</span>
-          </div>
-          <button class="btn-sub" id="btn-testplay" style="padding:9px 14px; font-size:13px">▶ 이대로 들어보기</button>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>직접 입력해도 돼요 <span style="color:var(--dim); font-weight:500">(분 : 초)</span></label>
-        <div class="timepick">
-          <input id="in-min" type="number" min="0" value="0" inputmode="numeric" aria-label="분">
-          <span class="colon">:</span>
-          <input id="in-sec" type="number" min="0" max="59" value="0" inputmode="numeric" aria-label="초">
-          <button class="btn-sub" id="btn-preview" style="flex:0 0 auto; padding:13px 16px">그 지점 듣기</button>
         </div>
       </div>
 
@@ -858,7 +890,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
     <div id="guest-wait" class="card hidden" style="text-align:center; color:var(--dim)">
       진행자가 게임을 시작하기를 기다리는 중…
     </div>
-    <div class="note">
+    <div class="note" id="sound-unlock-note">
       <b>소리 준비</b> — 휴대폰은 한 번 눌러줘야 소리가 나와요. 시작 전에 꼭 눌러주세요.
       <button class="btn-sub" id="btn-unlock" style="width:100%; margin-top:10px">소리 켜기</button>
     </div>
@@ -871,7 +903,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
       <div id="rules-content" style="margin-top:12px; font-size:15.5px; line-height:1.85; color:var(--paper)">
         <div style="margin-bottom:14px">
           <b style="color:var(--cyan)">1️⃣ 정답 입력 규칙</b>
-          <div style="margin-top:6px; margin-left:12px; color:var(--dim)">
+          <div style="margin-top:6px; margin-left:12px; color:var(--dim)" id="rules-answer-detail">
             • 정답: <b style="color:var(--paper)">가수 + 제목</b> (예: "뉴진스 하입보이")
             <br>• 띄어쓰기는 해도 되고 안 해도 됨 (예: "뉴진스하입보이" ✅)
             <br>• 가수만 또는 제목만 → <b style="color:var(--pink)">오답 ❌</b>
@@ -906,7 +938,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
           <b style="color:var(--cyan)">5️⃣ 문제 넘기기 (과반수)</b>
           <div style="margin-top:6px; margin-left:12px; color:var(--dim)">
             • <b style="color:var(--gold)">과반수 이상</b>이 문제를 못 맞추면 넘길 수 있음
-            <br>• 정답이 나온 후 "다음 곡" 버튼을 눌러 진행
+            <br>• 정답이 나온 후 "다음 문제" 버튼을 눌러 진행
             <br>• <b style="color:var(--pink)">⚠️ 악의적 넘김은 금지!</b>
           </div>
         </div>
@@ -926,7 +958,8 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
       <button class="btn-sub" id="btn-ad-report" style="font-size:13.5px; padding:10px; color:#FF9A9A; border-color:rgba(255,122,122,.4)">📢 광고 나왔어요</button>
     </div>
 
-    <div class="stage">
+    <div class="stage" id="stage">
+      <img id="stage-person-img" class="hidden" alt="">
       <div class="stage-cover" id="stage-cover">
         <div class="round-num" id="stage-round">ROUND 1</div>
         <div class="timer" id="timer">30</div>
@@ -939,7 +972,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
       <div class="reveal hidden" id="stage-error" style="background:linear-gradient(180deg, rgba(48,12,12,.97), rgba(24,6,6,.99))">
         <div class="who" style="color:var(--pink)">재생 오류</div>
         <div class="artist" id="stage-error-text" style="font-size:15px; line-height:1.5"></div>
-        <div class="gain" style="color:var(--dim); font-size:13px">진행자가 다음 곡으로 넘겨주세요</div>
+        <div class="gain" style="color:var(--dim); font-size:13px">진행자가 다음으로 넘겨주세요</div>
       </div>
       <div class="reveal hidden" id="reveal">
         <div class="who" id="reveal-who"></div>
@@ -980,7 +1013,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
     <div id="state-used" class="hidden" style="margin-bottom:14px">
       <div class="locked">
         <div class="big">기회를 썼어요</div>
-        <div class="sub">다음 곡에서 다시 도전할 수 있어요</div>
+        <div class="sub">다음 문제에서 다시 도전할 수 있어요</div>
       </div>
     </div>
 
@@ -999,7 +1032,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
     </div>
 
     <div id="state-next" class="hidden" style="margin-bottom:14px">
-      <button class="btn-go" id="btn-ready">다음 곡 <span id="ready-count"></span></button>
+      <button class="btn-go" id="btn-ready">다음 문제 <span id="ready-count"></span></button>
       <div class="buzzer-hint" id="ready-hint"></div>
     </div>
 
@@ -1081,9 +1114,11 @@ const FIREBASE_CONFIG = {
 
 const TARGET_SCORE = 15;
 const WIN_PLACES   = 3;
-const TIME_LIMIT   = 30;   // 기본값: 30초 (노래마다 다르게 설정 가능)
+const TIME_LIMIT_NORMAL = 30;   // 기본 노래맞추기 — 라운드 기본 제한시간(초) · 노래마다 다르게 설정 가능
+const TIME_LIMIT_HIDDEN = 15;   // 히든이벤트 — 라운드 기본 제한시간(초)
 const BUZZ_TIME    = 10;
-const HINT_AT      = 10;   // 10초 남았을 때 힌트 공개
+const HINT_AT_NORMAL = 10;   // 기본 노래맞추기 — 남은 시간이 몇 초일 때 힌트를 공개할지
+const HINT_AT_HIDDEN = 10;   // 히든이벤트 — 남은 시간이 몇 초일 때 힌트를 공개할지
 const MANAGER_PIN_NORMAL = "1234";   // 기본 노래맞추기 — 노래 관리 비밀번호
 const MANAGER_PIN_HIDDEN = "0522";   // 히든이벤트 — 입장 비밀번호 & 노래 관리 비밀번호
 
@@ -1097,25 +1132,14 @@ const show = (id, on=true) => $(id).classList.toggle('hidden', !on);
 if (!FIREBASE_CONFIG.databaseURL){ show('gate', true); throw new Error('Firebase 설정 없음'); }
 window.__booted = true;
 
-$('btn-game-song').onclick  = () => { enterMode('normal'); show('screen-landing', false); show('screen-home', true); };
+$('btn-game-song').onclick  = () => { enterGame('song', 'normal'); show('screen-landing', false); show('screen-home', true); };
+$('btn-game-person').onclick = () => { enterGame('person', 'normal'); show('screen-landing', false); show('screen-home', true); };
 $('btn-to-landing').onclick = () => { show('screen-home', false); show('screen-landing', true); };
 
 $('btn-hidden-event').onclick = () => {
-  show('screen-landing', false); show('screen-hidden-pw', true);
-  setTimeout(()=>$('hidden-pw-input').focus(), 60);
+  enterGame('song', 'hidden');
+  show('screen-landing', false); show('screen-home', true);
 };
-$('btn-hidden-pw-back').onclick = () => {
-  $('hidden-pw-input').value=''; $('hidden-pw-msg').textContent='';
-  show('screen-hidden-pw', false); show('screen-landing', true);
-};
-function tryHiddenPw(){
-  if ($('hidden-pw-input').value.trim() !== MANAGER_PIN_HIDDEN) return msg('hidden-pw-msg','비밀번호가 달라요.');
-  $('hidden-pw-input').value=''; $('hidden-pw-msg').textContent='';
-  enterMode('hidden');
-  show('screen-hidden-pw', false); show('screen-home', true);
-}
-$('btn-hidden-pw-ok').onclick = tryHiddenPw;
-$('hidden-pw-input').addEventListener('keydown', e => { if (e.key === 'Enter') tryHiddenPw(); });
 
 const app = initializeApp(FIREBASE_CONFIG);
 const db  = getDatabase(app);
@@ -1132,27 +1156,68 @@ let endSeqTimer = null;
 let player=null, ytReady=false;
 let preview=null, previewReady=false;
 
-// ========== 🎉 히든이벤트 모드 ==========
-// 노래맞추기 카테고리 안에서 "기본"과 "히든이벤트" 두 가지를 고를 수 있어요.
-// 두 모드는 노래 목록과 방이 서로 완전히 분리된 별도 공간을 씁니다 (같은 방 코드를 써도 안 섞여요).
-let mode = 'normal';   // 'normal' | 'hidden'
-const libraryPath = () => mode === 'hidden' ? 'library_hidden' : 'library';
-const roomsPath   = () => mode === 'hidden' ? 'rooms_hidden' : 'rooms';
+// ========== 🎉 히든이벤트 모드 / 🙂 인물맞추기 카테고리 ==========
+// 노래맞추기 카테고리 안에서 "기본"과 "히든이벤트" 두 가지를 고를 수 있고,
+// 노래맞추기와는 완전히 다른 별도 카테고리로 "인물맞추기"도 고를 수 있어요.
+// 세 가지 모두 노래(또는 인물) 목록과 방이 서로 완전히 분리된 별도 공간을 씁니다.
+let mode = 'normal';       // 'normal' | 'hidden'   (노래맞추기 전용)
+let gameType = 'song';     // 'song' | 'person'
+const libraryPath = () => gameType === 'person' ? 'library_person' : (mode === 'hidden' ? 'library_hidden' : 'library');
+const roomsPath   = () => gameType === 'person' ? 'rooms_person'   : (mode === 'hidden' ? 'rooms_hidden'   : 'rooms');
 const libRef   = (suffix) => ref(db, suffix ? `${libraryPath()}/${suffix}` : libraryPath());
 const roomsRef = (code, suffix) => ref(db, suffix ? `${roomsPath()}/${code}/${suffix}` : `${roomsPath()}/${code}`);
+// 히든이벤트는 라운드 기본 시간·힌트 공개 시점 규칙이 기본 노래맞추기와 달라요.
+const timeLimitDefault = () => mode === 'hidden' ? TIME_LIMIT_HIDDEN : TIME_LIMIT_NORMAL;
+const hintAtValue      = () => mode === 'hidden' ? HINT_AT_HIDDEN : HINT_AT_NORMAL;
+const countUnit        = () => gameType === 'person' ? '명' : '곡';
 
 let libraryUnsub = null;
 function subscribeLibrary(){
   if (libraryUnsub) libraryUnsub();
   libraryUnsub = onValue(libRef(), snap => {
     library = snap.val() || [];
-    $('lib-count').textContent = `(${library.length}곡)`;
+    $('lib-count').textContent = `(${library.length}${countUnit()})`;
     renderLibrary();
   });
 }
 
-function enterMode(next){
-  if (mode !== next){ mode = next; subscribeLibrary(); }
+// 화면에 흩어진 "노래" 관련 문구들을 카테고리(노래맞추기/인물맞추기)에 맞춰 한 번에 바꿔줍니다.
+function applyGameLabels(){
+  const isPerson = gameType === 'person';
+  $('home-title').textContent = isPerson ? '🙂 인물맞추기' : '🎵 노래맞추기';
+  $('manage-btn-label').textContent = isPerson ? '인물 관리' : '노래 관리';
+  $('manage-heading').textContent = isPerson ? '등록된 인물' : '등록된 노래';
+  $('add-heading').textContent = isPerson ? '인물 추가' : '노래 추가';
+  $('song-filter').placeholder = isPerson ? '이름으로 찾기' : '제목이나 가수로 찾기';
+  $('song-empty').innerHTML = isPerson
+    ? '아직 등록된 인물이 없어요.<br>여기 추가하면 모든 방에 계속 남아요.'
+    : '아직 등록된 노래가 없어요.<br>여기 추가하면 모든 방에 계속 남아요.';
+  $('in-hint').placeholder = isPerson ? '예: 이 사람이 유명해진 계기' : '예: 2022년 데뷔곡 / 광고에 많이 나온 그 노래';
+  $('timelimit-desc').textContent = isPerson ? '사진을 보면서 답하는 시간' : '음악 들으면서 답하는 시간';
+  show('song-fields', !isPerson);
+  show('person-fields', isPerson);
+  $('rule-tab-answer-li').innerHTML = isPerson
+    ? '정답 = <b>이름</b> (예: 아이유)'
+    : '정답 = <b>가수+제목</b> (예: 뉴진스 하입보이)';
+  $('rules-answer-detail').innerHTML = isPerson
+    ? '• 정답: <b style="color:var(--paper)">이름</b> (예: "아이유")'
+      + '<br>• 띄어쓰기는 해도 되고 안 해도 됨'
+      + '<br>• 등록할 때 넣어둔 이름(별명 포함) 중 하나만 맞으면 정답이에요'
+    : '• 정답: <b style="color:var(--paper)">가수 + 제목</b> (예: "뉴진스 하입보이")'
+      + '<br>• 띄어쓰기는 해도 되고 안 해도 됨 (예: "뉴진스하입보이" ✅)'
+      + '<br>• 가수만 또는 제목만 → <b style="color:var(--pink)">오답 ❌</b>';
+  $('answer').placeholder = isPerson ? '이름 (예: 아이유)' : '가수 제목 (예: 뉴진스 하입보이)';
+  show('btn-sound-fix', !isPerson);
+  show('btn-ad-report', !isPerson);
+  show('sound-unlock-note', !isPerson);
+}
+
+function enterGame(nextGameType, nextMode){
+  const changed = gameType !== nextGameType || mode !== nextMode;
+  gameType = nextGameType;
+  mode = nextMode;
+  if (changed) subscribeLibrary();
+  applyGameLabels();
   $('home-mode-badge').textContent = mode === 'hidden' ? '🎉 히든이벤트 모드예요' : '';
   show('home-mode-badge', mode === 'hidden');
   $('manage-mode-badge').textContent = mode === 'hidden' ? '🎉 히든이벤트' : '';
@@ -1325,7 +1390,7 @@ function isUnlocked(){ return !managerPin() || sessionStorage.getItem(mgrUnlockK
 
 $('btn-manage').onclick = () => {
   show('screen-home', false);
-  if (isUnlocked()) show('screen-manage', true);
+  if (isUnlocked()){ cancelEdit(); show('screen-manage', true); }
   else { show('screen-pin', true); setTimeout(()=>$('pin-input').focus(), 60); }
 };
 
@@ -1333,6 +1398,7 @@ function tryPin(){
   if ($('pin-input').value.trim() !== managerPin()) return msg('pin-msg','비밀번호가 달라요.');
   sessionStorage.setItem(mgrUnlockKey(),'ok');
   $('pin-input').value=''; $('pin-msg').textContent='';
+  cancelEdit();
   show('screen-pin', false); show('screen-manage', true);
 }
 $('btn-pin-ok').onclick = tryPin;
@@ -1341,19 +1407,53 @@ $('btn-pin-back').onclick = () => { show('screen-pin', false); show('screen-home
 
 $('btn-back').onclick = () => { show('screen-manage',false); show('screen-home',true); };
 
-$('btn-add').onclick = async () => {
-  const parsed  = parseYouTube($('in-url').value);
-  const artists = $('in-artist').value.split(',').map(s=>s.trim()).filter(Boolean);
-  const titles  = $('in-title').value.split(',').map(s=>s.trim()).filter(Boolean);
-  if (!parsed)         return msg('add-msg','유튜브 링크를 다시 확인해주세요.');
-  if (!artists.length) return msg('add-msg','가수 이름을 입력해주세요.');
-  if (!titles.length)  return msg('add-msg','노래 제목을 입력해주세요.');
+// ---- 인물맞추기: 사진 링크 미리보기 ----
+function updatePersonPreview(){
+  const url = $('in-img-url').value.trim();
+  const img = $('person-img-preview');
+  if (url){
+    img.src = url;
+    show('person-img-preview', true);
+    show('person-preview-empty', false);
+  } else {
+    img.src = '';
+    show('person-img-preview', false);
+    show('person-preview-empty', true);
+    $('person-preview-empty').textContent = '사진 링크를 넣으면 여기에 미리보기가 나와요';
+  }
+}
+$('in-img-url').addEventListener('input', updatePersonPreview);
+$('person-img-preview').addEventListener('error', () => {
+  show('person-img-preview', false);
+  show('person-preview-empty', true);
+  $('person-preview-empty').textContent = '이미지를 불러올 수 없어요. 링크를 확인해주세요.';
+});
 
-  const start = startSeconds();
-  const hint  = $('in-hint').value.trim();
-  const timeLimit = Math.max(5, Math.min(90, parseInt($('in-timelimit').value,10) || TIME_LIMIT));
-  const entry = { v:parsed.id, s:start, ar:artists, ti:titles, tl:timeLimit };
-  if (hint) entry.h = hint;
+$('btn-add').onclick = async () => {
+  const hint = $('in-hint').value.trim();
+  const timeLimit = Math.max(5, Math.min(90, parseInt($('in-timelimit').value,10) || timeLimitDefault()));
+  let entry, successMsg;
+
+  if (gameType === 'person'){
+    const imgUrl = $('in-img-url').value.trim();
+    const names  = $('in-name').value.split(',').map(s=>s.trim()).filter(Boolean);
+    if (!imgUrl)       return msg('add-msg','사진 링크를 입력해주세요.');
+    if (!names.length) return msg('add-msg','이름을 입력해주세요.');
+    entry = { img:imgUrl, ar:names, ti:names, tl:timeLimit };
+    if (hint) entry.h = hint;
+    successMsg = `${names[0]} (${timeLimit}초)`;
+  } else {
+    const parsed  = parseYouTube($('in-url').value);
+    const artists = $('in-artist').value.split(',').map(s=>s.trim()).filter(Boolean);
+    const titles  = $('in-title').value.split(',').map(s=>s.trim()).filter(Boolean);
+    if (!parsed)         return msg('add-msg','유튜브 링크를 다시 확인해주세요.');
+    if (!artists.length) return msg('add-msg','가수 이름을 입력해주세요.');
+    if (!titles.length)  return msg('add-msg','노래 제목을 입력해주세요.');
+    const start = startSeconds();
+    entry = { v:parsed.id, s:start, ar:artists, ti:titles, tl:timeLimit };
+    if (hint) entry.h = hint;
+    successMsg = `${artists[0]} - ${titles[0]} (${fmtTime(start)}부터 · ${timeLimit}초)`;
+  }
 
   let next;
   if (editing !== null){ next = [...library]; next[editing] = entry; }
@@ -1362,10 +1462,9 @@ $('btn-add').onclick = async () => {
 
   const wasEditing = editing !== null;
   cancelEdit();
-  if (previewReady) preview.stopVideo();
-  msg('add-msg',
-    `${artists[0]} - ${titles[0]} (${fmtTime(start)}부터 · ${timeLimit}초) ${wasEditing ? '수정했어요.' : '추가했어요.'}`, true);
-  $('in-url').focus();
+  if (gameType === 'song' && previewReady) preview.stopVideo();
+  msg('add-msg', `${successMsg} ${wasEditing ? '수정했어요.' : '추가했어요.'}`, true);
+  if (gameType === 'person') $('in-img-url').focus(); else $('in-url').focus();
 };
 
 window.deleteSong = async i => {
@@ -1379,24 +1478,34 @@ window.editSong = i => {
   const s = library[i];
   if (!s) return;
   editing = i;
-  $('in-url').value    = 'https://youtu.be/' + s.v;
-  $('in-artist').value = s.ar.join(', ');
-  $('in-title').value  = s.ti.join(', ');
-  $('in-hint').value   = s.h || '';
-  $('in-timelimit').value = Number(s.tl) > 0 ? Number(s.tl) : TIME_LIMIT;
-  setTimeInputs(s.s);
-  loadedVideoId = null;
-  loadPreview(s.s, true);
-  $('btn-add').textContent = `${i+1}번 곡 수정 저장`;
+  $('in-hint').value = s.h || '';
+  $('in-timelimit').value = Number(s.tl) > 0 ? Number(s.tl) : timeLimitDefault();
+  if (gameType === 'person'){
+    $('in-img-url').value = s.img || '';
+    $('in-name').value = (s.ar||[]).join(', ');
+    updatePersonPreview();
+  } else {
+    $('in-url').value    = 'https://youtu.be/' + s.v;
+    $('in-artist').value = s.ar.join(', ');
+    $('in-title').value  = s.ti.join(', ');
+    setTimeInputs(s.s);
+    loadedVideoId = null;
+    loadPreview(s.s, true);
+  }
+  $('btn-add').textContent = `${i+1}번 항목 수정 저장`;
   show('btn-cancel-edit', true);
   msg('add-msg', '내용을 고친 뒤 저장을 눌러주세요.', true);
-  $('in-artist').scrollIntoView({ behavior:'smooth', block:'center' });
+  (gameType === 'person' ? $('in-name') : $('in-artist')).scrollIntoView({ behavior:'smooth', block:'center' });
 };
 
 function cancelEdit(){
   editing = null;
   $('in-url').value=''; $('in-artist').value=''; $('in-title').value=''; $('in-hint').value='';
-  $('in-timelimit').value = String(TIME_LIMIT);
+  $('in-img-url').value=''; $('in-name').value='';
+  updatePersonPreview();
+  $('in-timelimit').value = String(timeLimitDefault());
+  $('timelimit-default-label').textContent = String(timeLimitDefault());
+  $('bulk-time-label').textContent = `⏱️ 모든 ${gameType === 'person' ? '인물' : '노래'} 제한시간을 ${timeLimitDefault()}초로 맞추기`;
   setTimeInputs(0);
   $('btn-add').textContent = '추가하기';
   show('btn-cancel-edit', false);
@@ -1404,13 +1513,13 @@ function cancelEdit(){
 }
 $('btn-cancel-edit').onclick = cancelEdit;
 
-// 등록된 모든 곡의 제한시간을 기본값(30초)으로 한 번에 맞춥니다
+// 등록된 모든 곡의 제한시간을 모드별 기본값으로 한 번에 맞춥니다
 $('btn-bulk-time').onclick = async () => {
-  if (!library.length) return msg('bulk-msg','등록된 노래가 없어요.');
-  if (!confirm(`등록된 ${library.length}곡 전부를 ${TIME_LIMIT}초로 바꿀까요?`)) return;
-  const next = library.map(s => ({ ...s, tl: TIME_LIMIT }));
+  if (!library.length) return msg('bulk-msg', gameType === 'person' ? '등록된 인물이 없어요.' : '등록된 노래가 없어요.');
+  if (!confirm(`등록된 ${library.length}${countUnit()} 전부를 ${timeLimitDefault()}초로 바꿀까요?`)) return;
+  const next = library.map(s => ({ ...s, tl: timeLimitDefault() }));
   await set(libRef(), next);
-  msg('bulk-msg', `${next.length}곡 모두 ${TIME_LIMIT}초로 맞췄어요.`, true);
+  msg('bulk-msg', `${next.length}${countUnit()} 모두 ${timeLimitDefault()}초로 맞췄어요.`, true);
   setTimeout(() => { $('bulk-msg').textContent = ''; }, 3000);
 };
 
@@ -1499,7 +1608,7 @@ $('btn-testplay').onclick = () => {
   const p = parseYouTube($('in-url').value);
   if (!p) return msg('add-msg','유튜브 링크를 먼저 넣어주세요.');
   const from = startSeconds();
-  const dur  = Math.max(5, Math.min(90, parseInt($('in-timelimit').value,10) || TIME_LIMIT));
+  const dur  = Math.max(5, Math.min(90, parseInt($('in-timelimit').value,10) || timeLimitDefault()));
   loadedVideoId = null;
   loadPreview(from, true);
   clearTimeout(testStop);
@@ -1508,32 +1617,50 @@ $('btn-testplay').onclick = () => {
 };
 
 function renderLibrary(){
+  const isPerson = gameType === 'person';
   const q = norm($('song-filter')?.value || '');
   const rows = library
     .map((s,i) => ({ s, i }))
     .filter(({s}) => !adOnly || s.ad)
     .filter(({s}) => !q || s.ti.some(t=>norm(t).includes(q)) || s.ar.some(a=>norm(a).includes(q)));
 
-  const adCount = library.filter(s => s.ad).length;
+  const adCount = isPerson ? 0 : library.filter(s => s.ad).length;
   $('btn-ad-filter').textContent = adOnly
-    ? `↩ 전체 곡 보기 (광고 신고 ${adCount}곡)`
-    : `📢 광고 신고된 곡만 보기 (${adCount})`;
+    ? `↩ 전체 ${countUnit()} 보기 (광고 신고 ${adCount}${countUnit()})`
+    : `📢 광고 신고된 ${countUnit()}만 보기 (${adCount})`;
   show('btn-ad-filter', adCount > 0);
 
   $('manage-count').textContent = (q || adOnly)
-    ? `(${rows.length} / ${library.length}곡)`
-    : `(${library.length}곡)`;
+    ? `(${rows.length} / ${library.length}${countUnit()})`
+    : `(${library.length}${countUnit()})`;
   show('song-empty', library.length === 0);
 
   if (library.length && !rows.length){
-    $('songlist').innerHTML =
-      `<li class="empty" style="margin:0">조건에 맞는 노래가 없어요.</li>`;
+    $('songlist').innerHTML = isPerson
+      ? `<li class="empty" style="margin:0">조건에 맞는 인물이 없어요.</li>`
+      : `<li class="empty" style="margin:0">조건에 맞는 노래가 없어요.</li>`;
     return;
   }
 
   $('songlist').innerHTML = rows.map(({s,i}) => {
     const hasTl = Number(s.tl) > 0;
-    const tl = hasTl ? Number(s.tl) : TIME_LIMIT;
+    const tl = hasTl ? Number(s.tl) : timeLimitDefault();
+    if (isPerson){
+      return `<li class="song-item">
+         <img src="${esc(s.img||'')}" alt="" style="flex:0 0 auto; width:44px; height:44px; border-radius:10px; object-fit:cover; background:#000">
+         <div class="song-body">
+           <div class="song-ttl">${esc(s.ar[0])}</div>
+           <div class="song-tags">
+             <span class="tag limit${hasTl ? '' : ' basic'}">⏱️ ${tl}초${hasTl ? '' : ' 기본'}</span>
+             <span class="tag">${s.h ? '💡 힌트 직접' : '초성 힌트'}</span>
+           </div>
+         </div>
+         <div class="song-acts">
+           <button class="song-del" onclick="editSong(${i})" aria-label="수정" title="수정">✎</button>
+           <button class="song-del" onclick="deleteSong(${i})" aria-label="삭제" title="삭제">×</button>
+         </div>
+       </li>`;
+    }
     return `<li class="song-item${s.ad ? ' adflag' : ''}">
        <div class="song-num">${i+1}</div>
        <div class="song-body">
@@ -1560,21 +1687,32 @@ let adOnly = false;
 $('btn-ad-filter').onclick = () => { adOnly = !adOnly; renderLibrary(); };
 
 // ========== 방 ==========
-$('btn-create').onclick = async () => {
-  const spec = $('opt-spectator').checked;
-  const name = $('nickname').value.trim() || (spec ? '진행자' : '');
-  if (!name) return msg('home-msg','닉네임을 먼저 입력해주세요.');
-  if (!library.length) return msg('home-msg','노래를 먼저 등록해주세요.');
+async function createRoom(name, spectator){
+  if (!library.length) return msg('home-msg', gameType === 'person' ? '인물을 먼저 등록해주세요.' : '노래를 먼저 등록해주세요.');
   myName = name;
   let code;
   for (let i=0;i<8;i++){ code=makeCode(); if(!(await get(roomsRef(code))).exists()) break; }
   await set(roomsRef(code), {
     host:me, status:'lobby', createdAt:serverTimestamp(),
     order: shuffle(library.map((_, i) => i)),
-    players:{ [me]:{ name, score:0, spectator: spec } }
+    players:{ [me]:{ name, score:0, spectator } }
   });
   isHost = true;
   enterRoom(code);
+}
+
+$('btn-create').onclick = () => {
+  const spec = $('opt-spectator').checked;
+  const name = $('nickname').value.trim() || (spec ? '진행자' : '');
+  if (!name) return msg('home-msg','닉네임을 먼저 입력해주세요.');
+  createRoom(name, spec);
+};
+
+// 🧪 테스트방 — 방 만들기 절차 없이, 노래맞추기 카테고리에 들어오면 바로 보이는
+// 별도 버튼이에요. 닉네임을 안 적었으면 기본 이름으로 바로 테스트방(호스트)을 만들어요.
+$('btn-test-room').onclick = () => {
+  const name = $('nickname').value.trim() || '테스트진행자';
+  createRoom(name, false);
 };
 
 $('btn-join').onclick = async () => {
@@ -1678,7 +1816,7 @@ const newRound = idx => ({
 });
 
 $('btn-start').onclick = async () => {
-  if (!songCount()) return msg('start-msg','등록된 노래가 없어요.');
+  if (!songCount()) return msg('start-msg', gameType === 'person' ? '등록된 인물이 없어요.' : '등록된 노래가 없어요.');
   if (contenders().length < 2) return msg('start-msg','관전자를 뺀 참가자가 2명 이상이어야 해요.');
   await update(roomsRef(roomCode), {
     status:'playing',
@@ -1766,7 +1904,7 @@ $('btn-force').onclick = async () => {
   nextScheduled = '';
   
   // 피드백 표시
-  $('force-msg').textContent = '⚡ 다음 곡으로 넘기는 중…';
+  $('force-msg').textContent = '⚡ 다음 문제로 넘기는 중…';
   setTimeout(() => { $('force-msg').textContent = ''; }, 1200);
   
   await tryAdvance();
@@ -1823,10 +1961,10 @@ function songAt(i){
 }
 const songCount = () => (room?.order || []).length;
 
-// 곡에 저장된 제한시간을 읽어옵니다. 값이 없거나 이상하면 기본값(TIME_LIMIT)
+// 곡에 저장된 제한시간을 읽어옵니다. 값이 없거나 이상하면 모드별 기본값을 씁니다.
 function limitOf(song){
   const t = Number(song?.tl);
-  return (t > 0) ? t : TIME_LIMIT;
+  return (t > 0) ? t : timeLimitDefault();
 }
 
 const myPlayer = () => room?.players?.[me] || {};
@@ -1841,8 +1979,15 @@ function playPos(){
 }
 
 // ========== 재생 시작 ==========
-// 라운드가 열리면 각자 화면에서 곧바로 노래를 불러와 재생합니다.
+// 노래맞추기는 라운드가 열리면 각자 화면에서 곧바로 노래를 불러와 재생하고,
+// 인물맞추기는 영상 대신 사진을 화면에 띄웁니다.
 function startPlayback(song){
+  if (gameType === 'person'){
+    const img = $('stage-person-img');
+    img.src = song.img || '';
+    show('stage-person-img', true);
+    return;
+  }
   if (!ytReady) return;
   try{
     player.unMute();
@@ -1952,7 +2097,7 @@ function render(){
   if (room.status === 'playing') renderGame();
   if (room.status === 'ended'){
     if (tickTimer){ clearInterval(tickTimer); tickTimer=null; }
-    if (ytReady) player.stopVideo();
+    if (gameType === 'song' && ytReady) player.stopVideo();
     show('chat-panel', false);
     show('rule-tab', false);
     startEndSequence();
@@ -2076,9 +2221,11 @@ $('btn-skip-end2').onclick = skipEndSequence;
 
 function renderGame(){
   const r = room.round, song = songAt(r.idx);
+  $('stage').classList.toggle('person-mode', gameType === 'person');
+  show('eq', gameType === 'song');
 
   if (!song){
-    $('stage-error-text').textContent = '곡 정보를 불러오는 중이에요…';
+    $('stage-error-text').textContent = '문제 정보를 불러오는 중이에요…';
     show('stage-error', true);
     return;
   }
@@ -2101,7 +2248,7 @@ function renderGame(){
   const buzzKey = r.buzz ? String(r.buzz.at) : 'none';
   if (buzzKey !== lastBuzzKey){
     lastBuzzKey = buzzKey;
-    if (ytReady && !over){
+    if (gameType === 'song' && ytReady && !over){
       if (r.buzz) player.pauseVideo();
       else { player.seekTo(song.s + playPos(), true); player.playVideo(); }
     }
@@ -2113,7 +2260,7 @@ function renderGame(){
   const tried = !!r.tried?.[me];
   const iBuzz = r.buzz?.uid === me;
 
-  $('game-progress').textContent = `${r.idx+1} / ${songCount()} 곡`;
+  $('game-progress').textContent = `${r.idx+1} / ${songCount()} 문제`;
   $('my-score').textContent = amSpec() ? '👁 관전 중' : `내 점수 ${myPlayer().score ?? 0}점`;
   $('target-label').textContent = `${TARGET_SCORE}점 도달 시 확정`;
   $('stage-cover').classList.toggle('buzzed', !!r.buzz && !over);
@@ -2155,10 +2302,10 @@ function renderGame(){
 
   if (over){
     if (tickTimer){ clearInterval(tickTimer); tickTimer=null; }
-    if (ytReady) player.pauseVideo();
+    if (gameType === 'song' && ytReady) player.pauseVideo();
     $('reveal').classList.toggle('miss', !r.winner);
     $('reveal-who').textContent    = r.winner ? `${r.winner.name} 정답!` : '아무도 못 맞췄어요';
-    $('reveal-title').textContent  = `${song.ar[0]} - ${song.ti[0]}`;
+    $('reveal-title').textContent  = gameType === 'person' ? song.ar[0] : `${song.ar[0]} - ${song.ti[0]}`;
     $('reveal-gain').textContent   = r.winner ? '+1점' : '';
 
     const ids    = contenders().filter(([,p]) => !p.place).map(([uid]) => uid);
@@ -2171,7 +2318,7 @@ function renderGame(){
       ? '참가자들이 넘길지 정하는 중이에요'
       : (r.ready?.[me]
           ? (need - votes > 0 ? `${need - votes}명 더 눌러야 넘어가요` : '넘어가는 중…')
-          : `참가자 ${need}명이 누르면 다음 곡으로 넘어가요`);
+          : `참가자 ${need}명이 누르면 다음 문제로 넘어가요`);
 
     if (isHost && votes >= need && nextScheduled !== key){
       nextScheduled = key;
@@ -2197,12 +2344,12 @@ function tick(){
   const limit = limitOf(song);   // 곡별 제한시간, 없으면 기본값 30초
   const left = Math.max(0, limit - playPos());
   $('timer').textContent = Math.ceil(left);
-  $('timer').classList.toggle('hurry', left <= HINT_AT);
+  $('timer').classList.toggle('hurry', left <= hintAtValue());
 
   // 진행자가 강제로 힌트를 공개하거나, 남은 시간이 적으면 힌트 표시
-  if (r.forceHint || left <= HINT_AT){
+  if (r.forceHint || left <= hintAtValue()){
     if (!song) return;
-    $('hint-text').textContent = song.h || `${chosung(song.ar[0])} / ${chosung(song.ti[0])}`;
+    $('hint-text').textContent = song.h || (gameType === 'person' ? chosung(song.ar[0]) : `${chosung(song.ar[0])} / ${chosung(song.ti[0])}`);
     show('hint', true);
   }
 
