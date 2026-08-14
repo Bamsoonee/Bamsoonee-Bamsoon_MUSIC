@@ -2717,6 +2717,20 @@ $('btn-save-result').onclick = async () => {
   btn.disabled = true;
   btn.textContent = '이미지 만드는 중…';
   try{
+    // 최종 순위 목록과 아차상 카드는 등장할 때 "opacity:0 → 1"로 통통 튀며 나타나는
+    // 애니메이션이 적용돼 있어요. 그 애니메이션이 채 끝나기 전에(특히 아차상 카드는
+    // 0.3초 딜레이 후 0.8초 동안 재생돼요) 저장 버튼을 누르면, html2canvas가 그 순간의
+    // "아직 투명한" 상태를 그대로 캡처해버려서 카드 내용은 안 보이고 자리만 남아
+    // 빈 여백처럼 보이는 문제가 있었어요. 캡처 직전에 애니메이션을 강제로 끝난 상태로
+    // 고정해서, 항상 완전히 나타난 모습으로 저장되게 해요.
+    target.querySelectorAll('.rank.end-rank li, .humor-card.animate').forEach(el => {
+      el.style.animation = 'none';
+      el.style.opacity = '1';
+      el.style.transform = 'none';
+    });
+    // 스타일이 실제로 반영되도록 한 프레임 기다려요.
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
     // 캡처할 영역의 실제 크기를 직접 재서 넘겨줘요. 안 그러면 가끔 html2canvas가
     // 화면 전체 높이만큼 잡아버려서, 카드 밑에 빈 여백이 길게 남는 경우가 있어요.
     const w = target.scrollWidth;
