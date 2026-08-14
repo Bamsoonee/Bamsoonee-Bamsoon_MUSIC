@@ -569,15 +569,24 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 #stage-person-img{
   position:absolute; inset:0; width:100%; height:100%; object-fit:contain; z-index:1;
 }
+/* 인물맞추기는 사진이 주인공이라, 라운드 표시·타이머·힌트를 가운데가 아니라
+   모서리에 작은 배지로 띄워서 사진을 가리지 않게 합니다 */
 .stage.person-mode .stage-cover{
-  background:
-    radial-gradient(120% 90% at 50% 118%, rgba(255,61,139,.22) 0%, transparent 62%),
-    linear-gradient(180deg, rgba(12,5,19,.18) 0%, rgba(12,5,19,.5) 62%, rgba(12,5,19,.86) 100%);
+  display:block; background:transparent; padding:0;
 }
-.stage.person-mode .stage-cover.buzzed{
-  background:
-    radial-gradient(120% 90% at 50% 118%, rgba(255,201,61,.26) 0%, transparent 62%),
-    linear-gradient(180deg, rgba(24,15,3,.2) 0%, rgba(24,15,3,.55) 62%, rgba(24,15,3,.88) 100%);
+.stage.person-mode #stage-round{
+  position:absolute; left:12px; top:12px; margin:0; z-index:2;
+  font-size:12px; letter-spacing:1px;
+  background:rgba(10,4,16,.72); padding:5px 12px; border-radius:999px;
+}
+.stage.person-mode #timer{
+  position:absolute; right:12px; top:12px; margin:0; z-index:2;
+  font-size:clamp(22px,6vw,30px); line-height:1;
+  background:rgba(10,4,16,.72); padding:4px 14px; border-radius:14px;
+}
+.stage.person-mode #hint{
+  position:absolute; left:50%; bottom:12px; transform:translateX(-50%); z-index:2;
+  margin:0; width:max-content; max-width:90%;
 }
 .person-preview{width:100%; height:100%; object-fit:contain; background:#000}
 .person-preview-empty{
@@ -719,6 +728,20 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
     </div>
     <button class="hidden-event-link" id="btn-test-room" type="button">🧪 테스트방 (혼자 테스트하기)</button>
     <button class="btn-sub" id="btn-manage" style="width:100%"><span id="manage-btn-label">노래 관리</span> <span id="lib-count" style="color:var(--dim)"></span></button>
+  </div>
+
+  <!-- ========== 인물맞추기 입장 확인 ========== -->
+  <div id="screen-person-pw" class="hidden">
+    <div class="card">
+      <h2>🙂 인물맞추기 입장 비밀번호</h2>
+      <div class="field">
+        <label for="person-pw-input">비밀번호</label>
+        <input id="person-pw-input" type="password" inputmode="numeric" placeholder="숫자 비밀번호" autocomplete="off">
+      </div>
+      <button class="btn-main" id="btn-person-pw-ok">확인</button>
+      <div class="feedback bad" id="person-pw-msg"></div>
+    </div>
+    <button class="btn-sub" id="btn-person-pw-back" style="width:100%">돌아가기</button>
   </div>
 
   <!-- ========== 관리자 확인 ========== -->
@@ -1120,8 +1143,10 @@ const TIME_LIMIT_PERSON = 10;   // 인물맞추기 — 사진 보여주는 기�
 const BUZZ_TIME    = 10;
 const HINT_AT_NORMAL = 10;   // 기본 노래맞추기 — 남은 시간이 몇 초일 때 힌트를 공개할지
 const HINT_AT_HIDDEN = 10;   // 히든이벤트 — 남은 시간이 몇 초일 때 힌트를 공개할지
+const HINT_AT_PERSON = 5;    // 인물맞추기 — 남은 시간이 몇 초일 때 힌트를 공개할지
 const MANAGER_PIN_NORMAL = "1234";   // 기본 노래맞추기 — 노래 관리 비밀번호
 const MANAGER_PIN_HIDDEN = "0522";   // 히든이벤트 — 입장 비밀번호 & 노래 관리 비밀번호
+const ENTRY_PIN_PERSON   = "0522";   // 인물맞추기 — 입장 비밀번호
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, set, get, update, onValue, runTransaction, serverTimestamp, onDisconnect, push }
@@ -1134,13 +1159,30 @@ if (!FIREBASE_CONFIG.databaseURL){ show('gate', true); throw new Error('Firebase
 window.__booted = true;
 
 $('btn-game-song').onclick  = () => { enterGame('song', 'normal'); show('screen-landing', false); show('screen-home', true); };
-$('btn-game-person').onclick = () => { enterGame('person', 'normal'); show('screen-landing', false); show('screen-home', true); };
 $('btn-to-landing').onclick = () => { show('screen-home', false); show('screen-landing', true); };
 
 $('btn-hidden-event').onclick = () => {
   enterGame('song', 'hidden');
   show('screen-landing', false); show('screen-home', true);
 };
+
+// 🙂 인물맞추기는 혼자 만들어야 해서, 입장 비밀번호가 있어야 들어갈 수 있어요.
+$('btn-game-person').onclick = () => {
+  show('screen-landing', false); show('screen-person-pw', true);
+  setTimeout(()=>$('person-pw-input').focus(), 60);
+};
+$('btn-person-pw-back').onclick = () => {
+  $('person-pw-input').value=''; $('person-pw-msg').textContent='';
+  show('screen-person-pw', false); show('screen-landing', true);
+};
+function tryPersonPw(){
+  if ($('person-pw-input').value.trim() !== ENTRY_PIN_PERSON) return msg('person-pw-msg','비밀번호가 달라요.');
+  $('person-pw-input').value=''; $('person-pw-msg').textContent='';
+  enterGame('person', 'normal');
+  show('screen-person-pw', false); show('screen-home', true);
+}
+$('btn-person-pw-ok').onclick = tryPersonPw;
+$('person-pw-input').addEventListener('keydown', e => { if (e.key === 'Enter') tryPersonPw(); });
 
 const app = initializeApp(FIREBASE_CONFIG);
 const db  = getDatabase(app);
@@ -1169,7 +1211,7 @@ const libRef   = (suffix) => ref(db, suffix ? `${libraryPath()}/${suffix}` : lib
 const roomsRef = (code, suffix) => ref(db, suffix ? `${roomsPath()}/${code}/${suffix}` : `${roomsPath()}/${code}`);
 // 히든이벤트는 라운드 기본 시간·힌트 공개 시점 규칙이 기본 노래맞추기와 달라요.
 const timeLimitDefault = () => gameType === 'person' ? TIME_LIMIT_PERSON : (mode === 'hidden' ? TIME_LIMIT_HIDDEN : TIME_LIMIT_NORMAL);
-const hintAtValue      = () => mode === 'hidden' ? HINT_AT_HIDDEN : HINT_AT_NORMAL;
+const hintAtValue      = () => gameType === 'person' ? HINT_AT_PERSON : (mode === 'hidden' ? HINT_AT_HIDDEN : HINT_AT_NORMAL);
 const countUnit        = () => gameType === 'person' ? '명' : '곡';
 
 let libraryUnsub = null;
