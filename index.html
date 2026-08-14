@@ -228,6 +228,20 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 .divider{display:flex; align-items:center; gap:12px; color:var(--dim); font-size:12px; margin:18px 0; font-weight:600}
 .divider::before,.divider::after{content:''; flex:1; height:1px; background:var(--line)}
 
+.mode-switch{
+  display:flex; gap:6px; background:rgba(0,0,0,.28); border:1px solid var(--line);
+  border-radius:14px; padding:5px; margin-bottom:14px;
+}
+.mode-btn{
+  flex:1; padding:11px 8px; border-radius:10px; background:transparent; border:none;
+  color:var(--dim); font-family:var(--body); font-weight:700; font-size:14px;
+  transition:background .15s, color .15s;
+}
+.mode-btn.active{
+  background:linear-gradient(135deg,var(--pink),#C42BE0); color:#fff;
+  box-shadow:0 4px 14px rgba(255,61,139,.32);
+}
+
 .roomcode{font-family:var(--display); font-size:44px; letter-spacing:10px; color:var(--cyan); text-shadow:0 0 22px rgba(53,232,224,.5); text-align:center; margin:2px 0 4px; padding-left:10px}
 .roomcode-label{text-align:center; color:var(--dim); font-size:12px; font-weight:600; letter-spacing:1px}
 
@@ -667,6 +681,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
       <button class="btn-back" id="btn-to-landing" aria-label="뒤로">←</button>
       <div class="page-title">🎵 노래맞추기</div>
     </div>
+    <div class="mode-switch" id="mode-switch">
+      <button class="mode-btn active" id="mode-btn-normal" type="button">🎵 기본</button>
+      <button class="mode-btn" id="mode-btn-hidden" type="button">🎉 히든이벤트</button>
+    </div>
     <div class="card">
       <div class="field">
         <label for="nickname">닉네임</label>
@@ -705,6 +723,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 
   <!-- ========== 노래 관리 ========== -->
   <div id="screen-manage" class="hidden">
+    <div class="feedback hidden" id="manage-mode-badge" style="color:var(--gold); font-weight:800; margin:-4px 0 10px 4px"></div>
     <div class="card">
       <h2>등록된 노래 <span id="manage-count" style="color:var(--dim)"></span></h2>
       <div class="song-search">
@@ -787,6 +806,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 
   <!-- ========== 대기실 ========== -->
   <div id="screen-lobby" class="hidden">
+    <div class="feedback hidden" id="lobby-mode-badge" style="color:var(--gold); font-weight:800; text-align:center; margin-bottom:8px"></div>
     <div class="card">
       <div class="roomcode-label">방 코드</div>
       <div class="roomcode" id="lobby-code">----</div>
@@ -890,6 +910,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 
   <!-- ========== 게임 ========== -->
   <div id="screen-game" class="hidden">
+    <div class="feedback hidden" id="game-mode-badge" style="color:var(--gold); font-weight:800; text-align:center; margin-bottom:8px"></div>
     <div class="toolbar">
       <div class="status" id="game-progress"></div>
       <div class="status" id="my-score"></div>
@@ -1008,7 +1029,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
     <div class="card podium humor-reveal hidden" id="end-humor">
       <div class="podium-eyebrow">🎉 아차상</div>
       <div class="marquee-box"><div class="marquee-name" id="marquee-name">이름</div></div>
-      <div class="podium-sub">1·2·3등을 제외하고 뽑았어요</div>
+      <div class="podium-sub" id="humor-pool-note">1·2·3등을 제외하고 뽑았어요</div>
       <button class="btn-sub podium-skip" id="btn-skip-end2">건너뛰기 →</button>
     </div>
 
@@ -1023,7 +1044,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
         <div style="text-align:center">
           <div style="font-size:14px; color:var(--cyan); font-weight:700; letter-spacing:1px">🎉 아차상</div>
           <div style="font-family:var(--display); font-size:30px; margin:6px 0 2px" id="humor-name"></div>
-          <div style="font-size:14px; color:var(--dim)">1·2·3등을 제외하고 뽑았어요</div>
+          <div style="font-size:14px; color:var(--dim)" id="humor-pool-note-final">1·2·3등을 제외하고 뽑았어요</div>
         </div>
       </div>
 
@@ -1070,7 +1091,7 @@ if (!FIREBASE_CONFIG.databaseURL){ show('gate', true); throw new Error('Firebase
 window.__booted = true;
 
 $('btn-game-song').onclick  = () => { show('screen-landing', false); show('screen-home', true); };
-$('btn-to-landing').onclick = () => { show('screen-home', false); show('screen-landing', true); };
+$('btn-to-landing').onclick = () => { setMode('normal'); show('screen-home', false); show('screen-landing', true); };
 
 const app = initializeApp(FIREBASE_CONFIG);
 const db  = getDatabase(app);
@@ -1086,6 +1107,37 @@ let endSequenceStarted = false;
 let endSeqTimer = null;
 let player=null, ytReady=false;
 let preview=null, previewReady=false;
+
+// ========== 🎉 히든이벤트 모드 ==========
+// 노래맞추기 카테고리 안에서 "기본"과 "히든이벤트" 두 가지를 고를 수 있어요.
+// 두 모드는 노래 목록과 방이 서로 완전히 분리된 별도 공간을 씁니다 (같은 방 코드를 써도 안 섞여요).
+let mode = 'normal';   // 'normal' | 'hidden'
+const libraryPath = () => mode === 'hidden' ? 'library_hidden' : 'library';
+const roomsPath   = () => mode === 'hidden' ? 'rooms_hidden' : 'rooms';
+const libRef   = (suffix) => ref(db, suffix ? `${libraryPath()}/${suffix}` : libraryPath());
+const roomsRef = (code, suffix) => ref(db, suffix ? `${roomsPath()}/${code}/${suffix}` : `${roomsPath()}/${code}`);
+
+let libraryUnsub = null;
+function subscribeLibrary(){
+  if (libraryUnsub) libraryUnsub();
+  libraryUnsub = onValue(libRef(), snap => {
+    library = snap.val() || [];
+    $('lib-count').textContent = `(${library.length}곡)`;
+    renderLibrary();
+  });
+}
+
+function setMode(next){
+  if (mode === next) return;
+  mode = next;
+  $('mode-btn-normal').classList.toggle('active', mode === 'normal');
+  $('mode-btn-hidden').classList.toggle('active', mode === 'hidden');
+  $('manage-mode-badge').textContent = mode === 'hidden' ? '🎉 히든이벤트' : '';
+  show('manage-mode-badge', mode === 'hidden');
+  subscribeLibrary();
+}
+$('mode-btn-normal').onclick = () => setMode('normal');
+$('mode-btn-hidden').onclick = () => setMode('hidden');
 
 // ========== 규칙 토글 ==========
 let rulesOpen = true;
@@ -1128,7 +1180,7 @@ async function sendChat(){
 
   try{
     // Firebase에 저장 — onValue 구독이 이 메시지를 다시 받아 화면에 그려줍니다.
-    await push(ref(db, `rooms/${roomCode}/chat`), {
+    await push(roomsRef(roomCode, 'chat'), {
       uid: me,
       name: myName,
       text: text,
@@ -1145,11 +1197,7 @@ $('chat-form').addEventListener('submit', e => {
   sendChat();
 });
 
-onValue(ref(db, 'library'), snap => {
-  library = snap.val() || [];
-  $('lib-count').textContent = `(${library.length}곡)`;
-  renderLibrary();
-});
+subscribeLibrary();
 
 onValue(ref(db,'.info/serverTimeOffset'), s => { serverOffset = s.val() || 0; });
 const now = () => Date.now() + serverOffset;
@@ -1289,7 +1337,7 @@ $('btn-add').onclick = async () => {
   let next;
   if (editing !== null){ next = [...library]; next[editing] = entry; }
   else next = [...library, entry];
-  await set(ref(db,'library'), next);
+  await set(libRef(), next);
 
   const wasEditing = editing !== null;
   cancelEdit();
@@ -1300,7 +1348,7 @@ $('btn-add').onclick = async () => {
 };
 
 window.deleteSong = async i => {
-  await set(ref(db,'library'), library.filter((_,idx)=>idx!==i));
+  await set(libRef(), library.filter((_,idx)=>idx!==i));
   cancelEdit();
 };
 
@@ -1340,7 +1388,7 @@ $('btn-bulk-time').onclick = async () => {
   if (!library.length) return msg('bulk-msg','등록된 노래가 없어요.');
   if (!confirm(`등록된 ${library.length}곡 전부를 ${TIME_LIMIT}초로 바꿀까요?`)) return;
   const next = library.map(s => ({ ...s, tl: TIME_LIMIT }));
-  await set(ref(db,'library'), next);
+  await set(libRef(), next);
   msg('bulk-msg', `${next.length}곡 모두 ${TIME_LIMIT}초로 맞췄어요.`, true);
   setTimeout(() => { $('bulk-msg').textContent = ''; }, 3000);
 };
@@ -1498,8 +1546,8 @@ $('btn-create').onclick = async () => {
   if (!library.length) return msg('home-msg','노래를 먼저 등록해주세요.');
   myName = name;
   let code;
-  for (let i=0;i<8;i++){ code=makeCode(); if(!(await get(ref(db,'rooms/'+code))).exists()) break; }
-  await set(ref(db,'rooms/'+code), {
+  for (let i=0;i<8;i++){ code=makeCode(); if(!(await get(roomsRef(code))).exists()) break; }
+  await set(roomsRef(code), {
     host:me, status:'lobby', createdAt:serverTimestamp(),
     order: shuffle(library.map((_, i) => i)),
     players:{ [me]:{ name, score:0, spectator: spec } }
@@ -1514,12 +1562,12 @@ $('btn-join').onclick = async () => {
   const code = $('joincode').value.trim().toUpperCase();
   if (!name) return msg('home-msg','닉네임을 먼저 입력해주세요.');
   if (code.length !== 4) return msg('home-msg','방 코드는 4글자예요.');
-  const snap = await get(ref(db,'rooms/'+code));
+  const snap = await get(roomsRef(code));
   if (!snap.exists()) return msg('home-msg','그런 방이 없어요. 코드를 다시 확인해주세요.');
   if (snap.val().status === 'ended') return msg('home-msg','이미 끝난 방이에요.');
   myName = name;
   isHost = snap.val().host === me;
-  await set(ref(db,`rooms/${code}/players/${me}`), { name, score:0, spectator: spec });
+  await set(roomsRef(code, `players/${me}`), { name, score:0, spectator: spec });
   enterRoom(code);
 };
 
@@ -1530,11 +1578,16 @@ function enterRoom(code){
   show('screen-landing',false); show('screen-home',false);
   show('screen-manage',false); show('screen-lobby',true);
   show('host-panel',isHost); show('guest-wait',!isHost);
-  onDisconnect(ref(db,`rooms/${code}/players/${me}/online`)).set(false);
-  set(ref(db,`rooms/${code}/players/${me}/online`), true);
-  
+  const modeLabel = mode === 'hidden' ? '🎉 히든이벤트 방이에요' : '';
+  $('lobby-mode-badge').textContent = modeLabel;
+  show('lobby-mode-badge', mode === 'hidden');
+  $('game-mode-badge').textContent = mode === 'hidden' ? '🎉 히든이벤트' : '';
+  show('game-mode-badge', mode === 'hidden');
+  onDisconnect(roomsRef(code, `players/${me}/online`)).set(false);
+  set(roomsRef(code, `players/${me}/online`), true);
+
   // 채팅 로드
-  onValue(ref(db,`rooms/${code}/chat`), snap => {
+  onValue(roomsRef(code, 'chat'), snap => {
     if (snap.exists()){
       const data = snap.val();
       chatMessages.length = 0;
@@ -1545,8 +1598,8 @@ function enterRoom(code){
       renderChat();
     }
   });
-  
-  onValue(ref(db,'rooms/'+code), snap => { if(snap.exists()){ room=snap.val(); render(); } });
+
+  onValue(roomsRef(code), snap => { if(snap.exists()){ room=snap.val(); render(); } });
 }
 
 $('btn-copy').onclick = async () => {
@@ -1587,7 +1640,7 @@ $('btn-ad-report').onclick = async () => {
   if (!room || room.status !== 'playing') return;
   const li = room.order?.[room.round.idx];
   if (li === undefined || li === null) return;
-  await set(ref(db,`library/${li}/ad`), true);
+  await set(libRef(`${li}/ad`), true);
   $('btn-ad-report').textContent = '✓ 신고했어요';
   $('btn-ad-report').disabled = true;
 };
@@ -1606,7 +1659,7 @@ const newRound = idx => ({
 $('btn-start').onclick = async () => {
   if (!songCount()) return msg('start-msg','등록된 노래가 없어요.');
   if (contenders().length < 2) return msg('start-msg','관전자를 뺀 참가자가 2명 이상이어야 해요.');
-  await update(ref(db,'rooms/'+roomCode), {
+  await update(roomsRef(roomCode), {
     status:'playing',
     round: newRound(0)
   });
@@ -1628,7 +1681,7 @@ $('btn-dev-add').onclick = async () => {
   if (!roomCode) return;
   const name = $('dev-name').value.trim() || `테스트${Object.values(room?.players||{}).filter(p=>p.bot).length + 1}`;
   const uid = 'bot' + Math.random().toString(36).slice(2, 8);
-  await set(ref(db, `rooms/${roomCode}/players/${uid}`), { name, score: 0, spectator: false, bot: true, online: true });
+  await set(roomsRef(roomCode, `players/${uid}`), { name, score: 0, spectator: false, bot: true, online: true });
   $('dev-name').value = '';
   msg('dev-msg', `"${name}" 추가했어요.`, true);
 };
@@ -1636,10 +1689,10 @@ $('dev-name').addEventListener('keydown', e => { if (e.key === 'Enter') $('btn-d
 
 window.devSetScore = async (uid, value) => {
   const n = Math.max(-999, Math.min(999, parseInt(value, 10) || 0));
-  await set(ref(db, `rooms/${roomCode}/players/${uid}/score`), n);
+  await set(roomsRef(roomCode, `players/${uid}/score`), n);
 };
 window.devRemove = async uid => {
-  await set(ref(db, `rooms/${roomCode}/players/${uid}`), null);
+  await set(roomsRef(roomCode, `players/${uid}`), null);
 };
 
 function renderDevTools(){
@@ -1674,18 +1727,18 @@ $('btn-dev-preview-end').onclick = async () => {
   patch.humor = rest.length ? rest[Math.floor(Math.random() * rest.length)].uid : null;
   patch.finishers = finishers;
 
-  await update(ref(db, 'rooms/' + roomCode), patch);
+  await update(roomsRef(roomCode), patch);
   msg('dev-msg', '결과 화면으로 넘어갈게요…', true);
 };
 
 async function goNext(){
   const next = room.round.idx + 1;
   if (next >= songCount()) return endGame();
-  await set(ref(db,`rooms/${roomCode}/round`), newRound(next));
+  await set(roomsRef(roomCode, 'round'), newRound(next));
 }
-$('btn-reveal').onclick = () => set(ref(db,`rooms/${roomCode}/round/revealed`), true);
-$('btn-hint-force').onclick = () => set(ref(db,`rooms/${roomCode}/round/forceHint`), true);
-$('btn-ready').onclick  = () => set(ref(db,`rooms/${roomCode}/round/ready/${me}`), true);
+$('btn-reveal').onclick = () => set(roomsRef(roomCode, 'round/revealed'), true);
+$('btn-hint-force').onclick = () => set(roomsRef(roomCode, 'round/forceHint'), true);
+$('btn-ready').onclick  = () => set(roomsRef(roomCode, `round/ready/${me}`), true);
 
 $('btn-force').onclick = async () => {
   if (!isHost || !room) return;
@@ -1707,7 +1760,7 @@ async function tryAdvance(){
   if (active.length <= 1){
     if (active.length === 1){
       const uid = active[0][0];
-      await update(ref(db,'rooms/'+roomCode), {
+      await update(roomsRef(roomCode), {
         [`players/${uid}/place`]: finished + 1,
         finishers: [...(room.finishers||[]), uid]
       });
@@ -1720,11 +1773,11 @@ async function tryAdvance(){
 }
 
 async function endGame(){
-  const snap = await get(ref(db,`rooms/${roomCode}/players`));
+  const snap = await get(roomsRef(roomCode, 'players'));
   const players = snap.val() || {};
   const pool = Object.keys(players).filter(uid => !players[uid].place && !players[uid].spectator);
   const humor = pool.length ? pool[Math.floor(Math.random()*pool.length)] : null;
-  await update(ref(db,'rooms/'+roomCode), { status:'ended', humor });
+  await update(roomsRef(roomCode), { status:'ended', humor });
 }
 
 async function restartGame(){
@@ -1739,7 +1792,7 @@ async function restartGame(){
   lastRoundKey=''; nextScheduled='';
   endSequenceStarted = false;
   clearTimeout(endSeqTimer);
-  await update(ref(db,'rooms/'+roomCode), patch);
+  await update(roomsRef(roomCode), patch);
 }
 $('btn-restart').onclick = restartGame;
 
@@ -1785,7 +1838,7 @@ async function pressBuzz(){
   if (amSpec() || amDone() || r.revealed || r.winner || r.buzz || r.tried?.[me]) return;
 
   const at = now();
-  await runTransaction(ref(db,`rooms/${roomCode}/round/buzz`), cur =>
+  await runTransaction(roomsRef(roomCode, 'round/buzz'), cur =>
     cur ? undefined : { uid:me, name:myName, at });
 }
 $('btn-buzzer').onclick = pressBuzz;
@@ -1799,19 +1852,19 @@ document.addEventListener('keydown', e => {
 });
 
 async function failBuzz(buzz, answerText){
-  const claim = await runTransaction(ref(db,`rooms/${roomCode}/round/tried/${buzz.uid}`), cur =>
+  const claim = await runTransaction(roomsRef(roomCode, `round/tried/${buzz.uid}`), cur =>
     cur ? undefined : true);
   if (!claim.committed) return;
 
   const lastFail = { name: buzz.name, at: now() };
   if (answerText) lastFail.answer = answerText;
 
-  await update(ref(db,`rooms/${roomCode}/round`), {
+  await update(roomsRef(roomCode, 'round'), {
     buzz: null,
     bonusMs: (room.round.bonusMs || 0) + (now() - buzz.at),
     lastFail
   });
-  await runTransaction(ref(db,`rooms/${roomCode}/players/${buzz.uid}/score`), s => (s||0) - 1);
+  await runTransaction(roomsRef(roomCode, `players/${buzz.uid}/score`), s => (s||0) - 1);
 }
 
 // ========== 답 제출 ==========
@@ -1833,17 +1886,17 @@ async function submitAnswer(){
     return;
   }
 
-  await set(ref(db,`rooms/${roomCode}/round/winner`), { uid:me, name:myName });
-  const after = await runTransaction(ref(db,`rooms/${roomCode}/players/${me}/score`), s => (s||0) + 1);
+  await set(roomsRef(roomCode, 'round/winner'), { uid:me, name:myName });
+  const after = await runTransaction(roomsRef(roomCode, `players/${me}/score`), s => (s||0) + 1);
 
   if ((after.snapshot.val() || 0) >= TARGET_SCORE){
-    const fin = await runTransaction(ref(db,`rooms/${roomCode}/finishers`), list => {
+    const fin = await runTransaction(roomsRef(roomCode, 'finishers'), list => {
       const arr = list || [];
       return arr.includes(me) ? undefined : [...arr, me];
     });
     if (fin.committed){
       const place = (fin.snapshot.val()||[]).indexOf(me) + 1;
-      await set(ref(db,`rooms/${roomCode}/players/${me}/place`), place);
+      await set(roomsRef(roomCode, `players/${me}/place`), place);
     }
   }
 }
@@ -1925,6 +1978,8 @@ function afterPodium(humor, humorPool){
   show('end-podium', false);
   if (humor){
     show('end-humor', true);
+    // 후보가 몇 명 중에서 뽑혔는지 보여줘요 (후보가 적을수록 같은 사람이 자주 나올 수 있어요)
+    $('humor-pool-note').textContent = `1·2·3등을 제외한 ${humorPool.length}명 중에서 뽑았어요`;
     playHumorMarquee(humorPool, humor.name, showFinalResults);
   } else {
     showFinalResults();
@@ -1950,8 +2005,12 @@ function playHumorMarquee(candidates, winnerName, onDone){
   const el = $('marquee-name');
   el.classList.remove('settle');
   const pool = candidates.length ? candidates : [winnerName];
-  const steps = 20;
+  const steps = 26;
+  const MIN_DELAY = 40;     // 처음엔 이름이 아주 빠르게 휙휙 지나가요
+  const MAX_DELAY = 420;    // 끝에 가까워질수록 한 칸 한 칸이 느려져요
+  const GROWTH = 1.115;     // 매 칸마다 이 배율만큼 느려짐 (슬롯머신처럼 점점 느려지는 감속 곡선)
   let i = 0;
+  let delay = MIN_DELAY;
   const stepOnce = () => {
     if (i >= steps){
       el.textContent = winnerName;
@@ -1962,9 +2021,8 @@ function playHumorMarquee(candidates, winnerName, onDone){
     }
     el.textContent = pool[Math.floor(Math.random() * pool.length)];
     i++;
-    const t = i / steps;
-    const delay = 55 + Math.pow(t, 3) * 260;   // 점점 느려지다 멈추는 슬롯머신 느낌
     endSeqTimer = setTimeout(stepOnce, delay);
+    delay = Math.min(MAX_DELAY, delay * GROWTH);
   };
   stepOnce();
 }
@@ -1978,6 +2036,8 @@ function showFinalResults(){
   show('humor-card', !!hu);
   if (hu) {
     $('humor-name').textContent = hu.name;
+    const poolCount = rankedPlayers().filter(p => !p.place).length;
+    $('humor-pool-note-final').textContent = `1·2·3등을 제외한 ${poolCount}명 중에서 뽑았어요`;
     const humorCard = $('humor-card');
     humorCard.classList.add('animate');
     humorCard.style.animationDelay = '0.3s';
@@ -2128,7 +2188,7 @@ function tick(){
   if (!isHost) return;
   const canStillTry = contenders()
     .some(([uid,p]) => !p.place && !r.tried?.[uid]);
-  if (left <= 0 || !canStillTry) set(ref(db,`rooms/${roomCode}/round/revealed`), true);
+  if (left <= 0 || !canStillTry) set(roomsRef(roomCode, 'round/revealed'), true);
 }
 
 function renderRank(targetId){
