@@ -2253,6 +2253,7 @@ async function pressBuzz(){
   const usedUp = gameType !== 'person' && r.tried?.[me];
   if (amSpec() || amDone() || r.revealed || r.winner || r.buzz || usedUp) return;
 
+  sfxContext(); // 순위 발표 효과음이 나중에 바로 재생될 수 있도록 지금(사용자가 누른 순간) 미리 오디오를 켜둬요
   const at = now();
   await runTransaction(roomsRef(roomCode, 'round/buzz'), cur =>
     cur ? undefined : { uid:me, name:myName, at });
@@ -2406,6 +2407,57 @@ function afterPodium(humor, humorPool){
   }
 }
 
+// ========== 순위 발표 효과음 (파일 없이 코드로 짧은 소리를 만들어요) ==========
+let sfxCtx = null;
+function sfxContext(){
+  try{
+    if (!sfxCtx) sfxCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (sfxCtx.state === 'suspended') sfxCtx.resume();
+    return sfxCtx;
+  }catch(e){ return null; }
+}
+function playTone(freq, start, dur, type='sine', peak=0.18){
+  const ctx = sfxContext();
+  if (!ctx) return;
+  try{
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    const t0 = ctx.currentTime + start;
+    gain.gain.setValueAtTime(0, t0);
+    gain.gain.linearRampToValueAtTime(peak, t0 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.05);
+  }catch(e){}
+}
+// 3등은 담백하게, 2등은 조금 더, 1등은 가장 화려한 상승 아르페지오로
+function playPodiumSound(place){
+  if (place === 3){
+    playTone(523, 0, 0.22, 'triangle');
+  } else if (place === 2){
+    playTone(587, 0,    0.16, 'triangle');
+    playTone(784, 0.12, 0.26, 'triangle');
+  } else {
+    playTone(523, 0,    0.14, 'triangle');
+    playTone(659, 0.10, 0.14, 'triangle');
+    playTone(784, 0.20, 0.14, 'triangle');
+    playTone(1047,0.32, 0.42, 'triangle');
+  }
+}
+// 슬롯머신처럼 이름이 휙휙 지나갈 때 나는 작은 틱 소리
+function playTickSound(){
+  playTone(700, 0, 0.05, 'square', 0.05);
+}
+// 아차상 당첨: 살짝 코믹하게 음이 내려가요 (웜프 웜프 느낌)
+function playHumorSound(){
+  playTone(392, 0,    0.18, 'sawtooth', 0.12);
+  playTone(330, 0.16, 0.18, 'sawtooth', 0.12);
+  playTone(262, 0.32, 0.36, 'sawtooth', 0.12);
+}
+
 function playPodiumSlides(order, idx, onDone){
   if (idx >= order.length){ onDone(); return; }
   const p = order[idx];
@@ -2418,6 +2470,7 @@ function playPodiumSlides(order, idx, onDone){
   box.classList.remove('slide-in');
   void box.offsetWidth;
   box.classList.add('slide-in');
+  playPodiumSound(p.place);
   endSeqTimer = setTimeout(() => playPodiumSlides(order, idx + 1, onDone), 2200);
 }
 
@@ -2437,10 +2490,12 @@ function playHumorMarquee(candidates, winnerName, onDone){
       void el.offsetWidth;
       el.classList.add('settle');
       $('humor-pool-note').textContent = `아챠챠! ${winnerName}에게 떨어졌다!`;
+      playHumorSound();
       endSeqTimer = setTimeout(onDone, 900);
       return;
     }
     el.textContent = pool[Math.floor(Math.random() * pool.length)];
+    playTickSound();
     i++;
     endSeqTimer = setTimeout(stepOnce, delay);
     delay = Math.min(MAX_DELAY, delay * GROWTH);
