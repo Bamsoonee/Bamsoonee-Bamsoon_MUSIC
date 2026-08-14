@@ -710,7 +710,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
   <div class="chat-panel hidden" id="chat-panel">
     <div class="chat-header" id="chat-header">채팅 (CHAT)<span class="chat-min" id="chat-min-icon">▾</span></div>
     <div class="chat-messages" id="chat-messages">
-      <div class="chat-empty">메시지가 없어요</div>
+      <div class="chat-empty" id="chat-empty">메시지가 없어요</div>
     </div>
     <form class="chat-input-row" id="chat-form" autocomplete="off">
       <input id="chat-input" type="text" placeholder="메시지 입력" autocomplete="off" maxlength="80">
@@ -1408,15 +1408,20 @@ $('chat-header').addEventListener('click', () => {
 
 function renderChat(){
   const empty = chatMessages.length === 0;
-  show('chat-empty', empty);
-  
-  $('chat-messages').innerHTML = chatMessages.map(msg => `
+
+  // 메시지가 하나도 없을 때 보여주는 안내 문구도 매번 innerHTML과 함께 새로 그려요.
+  // (예전엔 안내 문구 div를 따로 두고 있었는데, 메시지가 오면 innerHTML을 통째로
+  //  갈아끼우면서 그 div가 통째로 사라져버려 다음 메시지부터 화면 그리기가 멈추는
+  //  버그가 있었어요 — 그래서 채팅을 보내도 안 보였던 거예요.)
+  $('chat-messages').innerHTML = empty
+    ? '<div class="chat-empty">메시지가 없어요</div>'
+    : chatMessages.map(msg => `
     <div class="chat-msg ${msg.uid === me ? 'me' : ''}">
       <div class="chat-msg-name">${esc(msg.name)}</div>
       <div class="chat-msg-text">${esc(msg.text)}</div>
     </div>
   `).join('');
-  
+
   const msgBox = $('chat-messages');
   setTimeout(() => { msgBox.scrollTop = msgBox.scrollHeight; }, 10);
 }
