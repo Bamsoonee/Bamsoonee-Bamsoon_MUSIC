@@ -228,19 +228,13 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
 .divider{display:flex; align-items:center; gap:12px; color:var(--dim); font-size:12px; margin:18px 0; font-weight:600}
 .divider::before,.divider::after{content:''; flex:1; height:1px; background:var(--line)}
 
-.mode-switch{
-  display:flex; gap:6px; background:rgba(0,0,0,.28); border:1px solid var(--line);
-  border-radius:14px; padding:5px; margin-bottom:14px;
+.hidden-event-link{
+  display:block; width:100%; text-align:center; margin:0 0 12px;
+  padding:9px 10px; font-size:12.5px; font-weight:700; color:var(--dim);
+  background:transparent; border:1px dashed var(--line); border-radius:12px;
+  opacity:.62; transition:opacity .15s, color .15s, border-color .15s;
 }
-.mode-btn{
-  flex:1; padding:11px 8px; border-radius:10px; background:transparent; border:none;
-  color:var(--dim); font-family:var(--body); font-weight:700; font-size:14px;
-  transition:background .15s, color .15s;
-}
-.mode-btn.active{
-  background:linear-gradient(135deg,var(--pink),#C42BE0); color:#fff;
-  box-shadow:0 4px 14px rgba(255,61,139,.32);
-}
+.hidden-event-link:hover{ opacity:1; color:var(--gold); border-color:var(--gold) }
 
 .roomcode{font-family:var(--display); font-size:44px; letter-spacing:10px; color:var(--cyan); text-shadow:0 0 22px rgba(53,232,224,.5); text-align:center; margin:2px 0 4px; padding-left:10px}
 .roomcode-label{text-align:center; color:var(--dim); font-size:12px; font-weight:600; letter-spacing:1px}
@@ -665,6 +659,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
       </div>
       <div class="game-go">→</div>
     </button>
+    <button class="hidden-event-link" id="btn-hidden-event" type="button">🎉 히든이벤트</button>
 
     <div class="game-card soon">
       <div class="game-icon">✨</div>
@@ -681,10 +676,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
       <button class="btn-back" id="btn-to-landing" aria-label="뒤로">←</button>
       <div class="page-title">🎵 노래맞추기</div>
     </div>
-    <div class="mode-switch" id="mode-switch">
-      <button class="mode-btn active" id="mode-btn-normal" type="button">🎵 기본</button>
-      <button class="mode-btn" id="mode-btn-hidden" type="button">🎉 히든이벤트</button>
-    </div>
+    <div class="feedback hidden" id="home-mode-badge" style="color:var(--gold); font-weight:800; margin:-8px 0 12px 4px"></div>
     <div class="card">
       <div class="field">
         <label for="nickname">닉네임</label>
@@ -705,6 +697,20 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
       <div class="feedback bad" id="home-msg"></div>
     </div>
     <button class="btn-sub" id="btn-manage" style="width:100%">노래 관리 <span id="lib-count" style="color:var(--dim)"></span></button>
+  </div>
+
+  <!-- ========== 히든이벤트 입장 확인 ========== -->
+  <div id="screen-hidden-pw" class="hidden">
+    <div class="card">
+      <h2>🎉 히든이벤트 입장 비밀번호</h2>
+      <div class="field">
+        <label for="hidden-pw-input">비밀번호</label>
+        <input id="hidden-pw-input" type="password" inputmode="numeric" placeholder="숫자 비밀번호" autocomplete="off">
+      </div>
+      <button class="btn-main" id="btn-hidden-pw-ok">확인</button>
+      <div class="feedback bad" id="hidden-pw-msg"></div>
+    </div>
+    <button class="btn-sub" id="btn-hidden-pw-back" style="width:100%">돌아가기</button>
   </div>
 
   <!-- ========== 관리자 확인 ========== -->
@@ -1078,7 +1084,8 @@ const WIN_PLACES   = 3;
 const TIME_LIMIT   = 30;   // 기본값: 30초 (노래마다 다르게 설정 가능)
 const BUZZ_TIME    = 10;
 const HINT_AT      = 10;   // 10초 남았을 때 힌트 공개
-const MANAGER_PIN  = "1234";
+const MANAGER_PIN_NORMAL = "1234";   // 기본 노래맞추기 — 노래 관리 비밀번호
+const MANAGER_PIN_HIDDEN = "0522";   // 히든이벤트 — 입장 비밀번호 & 노래 관리 비밀번호
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, set, get, update, onValue, runTransaction, serverTimestamp, onDisconnect, push }
@@ -1090,8 +1097,25 @@ const show = (id, on=true) => $(id).classList.toggle('hidden', !on);
 if (!FIREBASE_CONFIG.databaseURL){ show('gate', true); throw new Error('Firebase 설정 없음'); }
 window.__booted = true;
 
-$('btn-game-song').onclick  = () => { show('screen-landing', false); show('screen-home', true); };
-$('btn-to-landing').onclick = () => { setMode('normal'); show('screen-home', false); show('screen-landing', true); };
+$('btn-game-song').onclick  = () => { enterMode('normal'); show('screen-landing', false); show('screen-home', true); };
+$('btn-to-landing').onclick = () => { show('screen-home', false); show('screen-landing', true); };
+
+$('btn-hidden-event').onclick = () => {
+  show('screen-landing', false); show('screen-hidden-pw', true);
+  setTimeout(()=>$('hidden-pw-input').focus(), 60);
+};
+$('btn-hidden-pw-back').onclick = () => {
+  $('hidden-pw-input').value=''; $('hidden-pw-msg').textContent='';
+  show('screen-hidden-pw', false); show('screen-landing', true);
+};
+function tryHiddenPw(){
+  if ($('hidden-pw-input').value.trim() !== MANAGER_PIN_HIDDEN) return msg('hidden-pw-msg','비밀번호가 달라요.');
+  $('hidden-pw-input').value=''; $('hidden-pw-msg').textContent='';
+  enterMode('hidden');
+  show('screen-hidden-pw', false); show('screen-home', true);
+}
+$('btn-hidden-pw-ok').onclick = tryHiddenPw;
+$('hidden-pw-input').addEventListener('keydown', e => { if (e.key === 'Enter') tryHiddenPw(); });
 
 const app = initializeApp(FIREBASE_CONFIG);
 const db  = getDatabase(app);
@@ -1127,17 +1151,13 @@ function subscribeLibrary(){
   });
 }
 
-function setMode(next){
-  if (mode === next) return;
-  mode = next;
-  $('mode-btn-normal').classList.toggle('active', mode === 'normal');
-  $('mode-btn-hidden').classList.toggle('active', mode === 'hidden');
+function enterMode(next){
+  if (mode !== next){ mode = next; subscribeLibrary(); }
+  $('home-mode-badge').textContent = mode === 'hidden' ? '🎉 히든이벤트 모드예요' : '';
+  show('home-mode-badge', mode === 'hidden');
   $('manage-mode-badge').textContent = mode === 'hidden' ? '🎉 히든이벤트' : '';
   show('manage-mode-badge', mode === 'hidden');
-  subscribeLibrary();
 }
-$('mode-btn-normal').onclick = () => setMode('normal');
-$('mode-btn-hidden').onclick = () => setMode('hidden');
 
 // ========== 규칙 토글 ==========
 let rulesOpen = true;
@@ -1299,18 +1319,19 @@ function msg(id,text,good=false){ const el=$(id); el.textContent=text; el.classN
 function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 // ======== 노래 관리 ========
-let unlocked = !MANAGER_PIN || sessionStorage.getItem('mgr') === 'ok';
+function managerPin(){ return mode === 'hidden' ? MANAGER_PIN_HIDDEN : MANAGER_PIN_NORMAL; }
+function mgrUnlockKey(){ return mode === 'hidden' ? 'mgr_hidden' : 'mgr'; }
+function isUnlocked(){ return !managerPin() || sessionStorage.getItem(mgrUnlockKey()) === 'ok'; }
 
 $('btn-manage').onclick = () => {
   show('screen-home', false);
-  if (unlocked) show('screen-manage', true);
+  if (isUnlocked()) show('screen-manage', true);
   else { show('screen-pin', true); setTimeout(()=>$('pin-input').focus(), 60); }
 };
 
 function tryPin(){
-  if ($('pin-input').value.trim() !== MANAGER_PIN) return msg('pin-msg','비밀번호가 달라요.');
-  unlocked = true;
-  sessionStorage.setItem('mgr','ok');
+  if ($('pin-input').value.trim() !== managerPin()) return msg('pin-msg','비밀번호가 달라요.');
+  sessionStorage.setItem(mgrUnlockKey(),'ok');
   $('pin-input').value=''; $('pin-msg').textContent='';
   show('screen-pin', false); show('screen-manage', true);
 }
