@@ -2305,7 +2305,7 @@ function playHumorMarquee(candidates, winnerName, onDone){
       el.textContent = winnerName;
       void el.offsetWidth;
       el.classList.add('settle');
-      $('humor-pool-note').textContent = `아챠챠! ${winnerName}에게 떨어졌다!`;
+      $('humor-pool-note').textContent = `아챠챠! 상품이 ${winnerName}에게 떨어졌다!`;
       endSeqTimer = setTimeout(onDone, 900);
       return;
     }
