@@ -2717,10 +2717,18 @@ $('btn-save-result').onclick = async () => {
   btn.disabled = true;
   btn.textContent = '이미지 만드는 중…';
   try{
+    // 캡처할 영역의 실제 크기를 직접 재서 넘겨줘요. 안 그러면 가끔 html2canvas가
+    // 화면 전체 높이만큼 잡아버려서, 카드 밑에 빈 여백이 길게 남는 경우가 있어요.
+    const w = target.scrollWidth;
+    const h = target.scrollHeight;
     const canvas = await html2canvas(target, {
       backgroundColor: '#14091C',   // 사이트 배경색이랑 맞춰서, 저장했을 때 어색한 흰 배경이 안 남게 해요
       scale: 2,                     // 화질을 두 배로 해서 선명하게 저장돼요
-      useCORS: true
+      useCORS: true,
+      width: w,
+      height: h,
+      windowWidth: w,
+      windowHeight: h
     });
     // 파일 이름은 일부러 영문으로 만들어요 — 한글 파일명을 쓰면 브라우저에 따라
     // "download"라는 이름으로만 저장되고 확장자(.png)까지 사라지는 경우가 있어요.
