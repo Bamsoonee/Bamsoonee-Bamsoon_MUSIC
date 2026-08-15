@@ -1065,6 +1065,13 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
       <button class="btn-sub" id="btn-ad-report" style="font-size:13.5px; padding:10px; color:#FF9A9A; border-color:rgba(255,122,122,.4)">📢 광고 나왔어요</button>
     </div>
 
+    <!-- "다음 문제" 버튼을 일부러 부저 버튼(아래쪽)이랑 멀리 떨어뜨려서, 다음 문제로
+         넘긴 직후 같은 자리를 실수로 또 눌러 부저가 눌리는 일이 없게 했어요 -->
+    <div id="state-next" class="hidden" style="margin-bottom:14px">
+      <button class="btn-go" id="btn-ready">다음 문제 <span id="ready-count"></span></button>
+      <div class="buzzer-hint" id="ready-hint"></div>
+    </div>
+
     <div class="stage" id="stage">
       <img id="stage-person-img" class="hidden" alt="">
       <div class="stage-cover" id="stage-cover">
@@ -1136,11 +1143,6 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--cyan); outline-
         <div class="big">👁 관전 중</div>
         <div class="sub">점수에 포함되지 않아요</div>
       </div>
-    </div>
-
-    <div id="state-next" class="hidden" style="margin-bottom:14px">
-      <button class="btn-go" id="btn-ready">다음 문제 <span id="ready-count"></span></button>
-      <div class="buzzer-hint" id="ready-hint"></div>
     </div>
 
     <div id="host-controls" class="hidden">
