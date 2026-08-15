@@ -1225,7 +1225,7 @@ const FIREBASE_CONFIG = {
   appId: "1:607898000978:web:c2306f8cabd91f89d5c98b"
 };
 
-const TARGET_SCORE = 15;
+const targetScore = () => gameType === 'person' ? 30 : 15;   // 인물맞추기만 30점 만점, 노래맞추기는 그대로 15점
 const WIN_PLACES   = 3;
 const TIME_LIMIT_NORMAL = 30;   // 기본 노래맞추기 — 라운드 기본 제한시간(초) · 노래마다 다르게 설정 가능
 const TIME_LIMIT_HIDDEN = 15;   // 히든이벤트 — 라운드 기본 제한시간(초)
@@ -2317,7 +2317,7 @@ async function submitAnswer(){
   await set(roomsRef(roomCode, 'round/winner'), { uid:me, name:myName });
   const after = await runTransaction(roomsRef(roomCode, `players/${me}/score`), s => (s||0) + 1);
 
-  if ((after.snapshot.val() || 0) >= TARGET_SCORE){
+  if ((after.snapshot.val() || 0) >= targetScore()){
     const fin = await runTransaction(roomsRef(roomCode, 'finishers'), list => {
       const arr = list || [];
       return arr.includes(me) ? undefined : [...arr, me];
@@ -2578,7 +2578,7 @@ function renderGame(){
 
   $('game-progress').textContent = `${r.idx+1} / ${songCount()} 문제`;
   $('my-score').textContent = amSpec() ? '👁 관전 중' : `내 점수 ${myPlayer().score ?? 0}점`;
-  $('target-label').textContent = `${TARGET_SCORE}점 도달 시 확정`;
+  $('target-label').textContent = `${targetScore()}점 도달 시 확정`;
   $('stage-cover').classList.toggle('buzzed', !!r.buzz && !over);
 
   if (r.buzz && !over){
